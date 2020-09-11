@@ -5,13 +5,21 @@ import os
 import sys
 import time
 import melee
+import argparse
 from model import AdvantageBarModel
+
+parser = argparse.ArgumentParser(description='SmashBot Analysis UI')
+parser.add_argument('--dolphin_path',
+                    '-e',
+                    help='Visualization Mode')
+args = parser.parse_args()
+
 
 model = None
 console = None
 gamestate = None
 
-class MainHandler(tornado.web.RequestHandler):
+class FrameHandler(tornado.web.RequestHandler):
     def get(self):
         global model
         global gamestate
@@ -26,14 +34,17 @@ def make_app():
         "xsrf_cookies": False,
     }
     return tornado.web.Application([
-        (r"/frame", MainHandler),
+        (r"/frame", FrameHandler),
      ], **settings)
 
-def your_function():
-    tornado.ioloop.IOLoop.current().call_later(delay=1, callback=your_function)
+def refresh_prediction():
+    # Schedule this function to be called again in half a second
+    #   Effectively runs it twice per second
+    tornado.ioloop.IOLoop.current().call_later(delay=1/2, callback=refresh_prediction)
     global gamestate
     gamestate = console.step()
     # Keep grabbing gamestates until it returns None. So we know it's the latest
+    #   We're using polling mode, so we need to
     while gamestate:
         new_gamestate = console.step()
         if new_gamestate is None:
@@ -42,7 +53,7 @@ def your_function():
 
 
 if __name__ == "__main__":
-    console = melee.Console(path="/home/altf4/Code/Ishiiruka/build/Binaries/",
+    console = melee.Console(path=args.dolphin_path,
                             slippi_address="127.0.0.1",
                             slippi_port=51441,
                             blocking_input=False,
@@ -64,5 +75,5 @@ if __name__ == "__main__":
 
     app = make_app()
     app.listen(8888)
-    tornado.ioloop.IOLoop.current().call_later(delay=1/60, callback=your_function)
+    tornado.ioloop.IOLoop.current().call_later(delay=1/60, callback=refresh_prediction)
     tornado.ioloop.IOLoop.current().start()

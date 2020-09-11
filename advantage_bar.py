@@ -45,8 +45,19 @@ def _int64_feature(value):
   """Returns an int64_list from a bool / enum / int / uint."""
   return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
-# Builds a dataset out of SLP files in training_data/
 if args.build:
+    """Builds the tfrecord dataset
+
+    We can't use raw SLP files with tensorflow, we need to parse the files,
+    extract the important information from them, and then store then in
+    .tfrecord files that integrate well with tf.data. That's what this step does.
+
+    Input:
+        SLP files located in training_data/
+            (Flat structure. No nested folders)
+    Output:
+        .tfrecord files located in tfrecords/ folder
+    """
     print("Building dataset...")
     directory = 'training_data/'
     num_files = len([f for f in os.listdir(directory)if os.path.isfile(os.path.join(directory, f))])
@@ -54,7 +65,12 @@ if args.build:
     for entry in bar(os.scandir(directory)):
         frames = []
         if entry.path.endswith(".slp") and entry.is_file():
-            console = melee.Console(is_dolphin=False, path=entry.path)
+            console = None
+            try:
+                console = melee.Console(is_dolphin=False, path=entry.path, allow_old_version=True)
+            except Exception as ex:
+                print("Got error, skipping file", ex)
+                continue
             try:
                 console.connect()
             except ubjson.decoder.DecoderException as ex:
@@ -105,6 +121,9 @@ if args.build:
                         stocks = (gamestate.player[1].stock, gamestate.player[2].stock)
             except melee.console.SlippiVersionTooLow as ex:
                 print("Slippi version too low", ex)
+            except Exception as ex:
+                print("Error processing file", ex)
+                continue
 
             filename = None
             if is_evaluation:

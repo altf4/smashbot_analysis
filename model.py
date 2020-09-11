@@ -5,7 +5,11 @@ import numpy as np
 import os
 
 def _parse_record(record):
-    """Parse a single record of a frame in the data and produce numpy output"""
+    """Parse a batch of tfrecord data, output batch of tensors ready for training
+
+    This is for use with tf.data, so everything here has to be executed as a tensorflow op.
+    You can't do arbitrary python in this function.
+    """
     feature_map = {
         "player1_character": tf.io.FixedLenFeature([], dtype=tf.int64),
         "player1_x": tf.io.FixedLenFeature([], dtype=tf.float32),
@@ -60,15 +64,17 @@ class AdvantageBarModel:
         """AdvantageBarModel
 
         Input params:
-            (one-hot): Stage
             (one-hot): Character of player 1
+            (one-hot): Character of player 2
+            (one-hot): Stage
             (float): X coordinate of player 1
             (float): Y coordinate of player 1
             (float): Damage of player 1
-            (one-hot): Character of player 2
+            (float): Stock of player 1
             (float): X coordinate of player 2
             (float): Y coordinate of player 2
             (float): Damage of player 2
+            (float): Stock of player 2
         """
         # Build the model
         self.model = tf.keras.Sequential()
@@ -87,12 +93,23 @@ class AdvantageBarModel:
         print(self.model.summary())
 
     def load(self):
+        """Load weights for the model from file"""
         self.model = tf.keras.models.load_model("savedmodel")
 
     def save(self):
+        """Save the current model to file"""
         self.model.save("savedmodel")
 
-    def train(self, epochs=20):
+    def train(self, epochs=10):
+        """Train the model
+
+        Assumes a directory structure (created by the "build" mode) like this:
+        tfrecrds/
+            train/
+                *.tfrecord
+            eval/
+                *.tfrecord
+        """
         dir = os.listdir("tfrecords/train/")
         training_files = ["tfrecords/train/" + s for s in dir]
         dir = os.listdir("tfrecords/eval/")
@@ -104,8 +121,10 @@ class AdvantageBarModel:
         BATCH_SIZE = 10000
         SHUFFLE_BUFFER_SIZE = 100
         # This is about a 20% split for ~1000 SLP files
-        VALIDATION_SIZE = 1572000 #TODO any way to make this dynamic? I think not...
+        # TODO any way to make this dynamic? Maybe extrapolate from the number of tfrecords
+        VALIDATION_SIZE = 15720000
 
+        # The operatons below happen as part of the tf.data pipeline
         training_data = training_data.shuffle(SHUFFLE_BUFFER_SIZE)
         dataset_validation = training_data.take(VALIDATION_SIZE)
         dataset_train = training_data.skip(VALIDATION_SIZE)
@@ -125,6 +144,7 @@ class AdvantageBarModel:
 
 
     def predict(self, gamestate):
+        """Given a single libmelee gamestate, make a prediction"""
         p1character = tf.one_hot(gamestate.player[1].character.value, 26).numpy()
         p2character = tf.one_hot(gamestate.player[2].character.value, 26).numpy()
         stage = tf.one_hot(AdvantageBarModel.stage_flatten(gamestate.stage.value), 6).numpy()
@@ -143,15 +163,10 @@ class AdvantageBarModel:
             [gamestate.player[2].stock],
         ])
 
-        # input_array = np.expand_dims(input_array, 1)
         input_array = np.array([input_array,])
 
-        # print(input_array, input_array.shape)
         prediction = self.model.predict(input_array)
         return prediction
-
-    def build(self):
-        pass
 
     @staticmethod
     def stage_flatten(stage):
