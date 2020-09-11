@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+
+<head>
+	<title>SmashBot Analysis</title>
+	<script src="chart.min.js"></script>
+	<script src="utils.js"></script>
+	<style>
+	canvas {
+		-moz-user-select: none;
+		-webkit-user-select: none;
+		-ms-user-select: none;
+	}
+	</style>
+</head>
+
+<body>
+	<div style="width: 90%; height: 800px">
+		<canvas id="canvas"></canvas>
+	</div>
+	<script>
+		var barChartData = {
+			labels: ['Game Advantage'],
+			datasets: [{
+				label: 'Player 1',
+				backgroundColor: window.chartColors.red,
+				data: [
+          50,
+				]
+			}, {
+				label: 'Player 2',
+				backgroundColor: window.chartColors.blue,
+				data: [
+					50,
+				]
+			}]
+
+		};
+		window.onload = function() {
+			var ctx = document.getElementById('canvas').getContext('2d');
+			window.myBar = new Chart(ctx, {
+				type: 'bar',
+				data: barChartData,
+				options: {
+					title: {
+						display: true,
+						text: 'SmashBot Analysis'
+					},
+          tooltips: {
+             enabled: false
+          },
+					responsive: true,
+					scales: {
+            yAxes: [{
+              ticks: {
+                  display: false,
+                  beginAtZero: true,
+                  max: 100
+              }
+            }],
+						x: {
+							stacked: true,
+						},
+						y: {
+							stacked: false
+						}
+					}
+				}
+			});
+		};
+
+    function asyncCallback(results)
+    {
+      console.log(results);
+      var player_one = parseFloat(results) * 100;
+      var player_two = 100 - player_one;
+
+      barChartData.datasets.forEach(function(dataset) {
+        if(dataset.label == "Player 1"){
+          dataset.data = dataset.data.map(function() {
+            return player_two;
+          });
+        } else {
+          dataset.data = dataset.data.map(function() {
+            return player_one;
+          });
+        }
+      });
+      window.myBar.update();
+    };
+
+    window.setInterval(function(){
+      var xmlHttp = new XMLHttpRequest();
+      xmlHttp.onreadystatechange = function() {
+          if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+              asyncCallback(xmlHttp.responseText);
+      }
+      xmlHttp.open("GET", "http://127.0.0.1:8888/frame", true); // true for asynchronous
+      xmlHttp.send(null);
+    }, 500);
+	</script>
+</body>
+
+</html>

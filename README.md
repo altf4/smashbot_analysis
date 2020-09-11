@@ -3,12 +3,10 @@
 An AI-powered advantage bar for Melee.
 
 ![Mockup of SmashBot Analysis](images/marth_winning.png)
-(Image Mockup. There is no graphical frontend yet)
+(Image Mockup)
 
 ## What Does the Analysis Mean?
-The analysis is SmashBot's best prediction on who will win the *current stock*, given the current game state.
-
-Future work will consider who will win the entire game, but not yet.
+The analysis is SmashBot's best prediction on who will win either the *current stock* or *the whole game* given the current game state.
 
 ## BETA
 
@@ -23,6 +21,7 @@ Specifically, the analysis is fed:
 - Both player's characters
 - Both player's damage
 - Both player's x,y coordinates
+- Both player's stock count
 - Current stage
 
 ## How does the SmashBot Analysis Work?
@@ -57,8 +56,10 @@ For this part, you'll need a full `libmelee` setup. Follow the instructions here
 
 Then run:
 
-`./advantage_bar.py --predict PATH_TO_DOLPHIN`
+`./visualization.py`
 
-Dolphin will boot up and you'll notice prediction values being printed to STDOUT during a match. It will look something like this: (Note the numbers on the left)
+Dolphin will boot up automatically. Load up a browser and point it at:
+
+`http://127.0.0.1:8888/static/index.html`
 
 ![Animated Example](images/animated_example.gif)
