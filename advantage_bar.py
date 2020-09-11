@@ -164,6 +164,7 @@ if args.predict:
 
     # Start a real game
     console = melee.Console(path=args.predict,
+                            is_dolphin=False,
                             slippi_address="127.0.0.1",
                             slippi_port=51441,
                             blocking_input=False,
