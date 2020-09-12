@@ -100,12 +100,15 @@ if args.build:
                             "player1_y": gamestate.player[1].y,
                             "player1_percent": gamestate.player[1].percent,
                             "player1_stock": gamestate.player[1].stock,
+                            "player1_action": gamestate.player[1].action.value,
                             "player2_x": gamestate.player[2].x,
                             "player2_y": gamestate.player[2].y,
                             "player2_percent": gamestate.player[2].percent,
                             "player2_stock": gamestate.player[2].stock,
+                            "player2_action": gamestate.player[2].action.value,
                             "player2_character": gamestate.player[1].character.value,
                             "stage": AdvantageBarModel.stage_flatten(gamestate.stage.value),
+                            "frame": gamestate.frame,
                             "stock_winner": -1
                         }
                         frames_temp.append(frame)
@@ -139,13 +142,16 @@ if args.build:
                             "player1_y": _float_feature(frame["player1_y"]),
                             "player1_percent": _float_feature(frame["player1_percent"]),
                             "player1_stock": _float_feature(frame["player1_stock"]),
+                            "player1_action": _int64_feature(frame["player1_action"]),
                             "player2_x": _float_feature(frame["player2_x"]),
                             "player2_y": _float_feature(frame["player2_y"]),
                             "player2_percent": _float_feature(frame["player2_percent"]),
                             "player2_stock": _float_feature(frame["player2_stock"]),
+                            "player2_action": _int64_feature(frame["player2_action"]),
                             "player2_character": _int64_feature(frame["player2_character"]),
                             "stage": _int64_feature(frame["stage"]),
-                            "stock_winner": _int64_feature(died),
+                            "frame": _float_feature(frame["frame"]),
+                            "stock_winner": _int64_feature(frame["stock_winner"]),
                             "game_winner": _int64_feature(game_winner),
                         }))
                         file_writer.write(newframe.SerializeToString())
@@ -164,11 +170,7 @@ if args.predict:
 
     # Start a real game
     console = melee.Console(path=args.predict,
-                            is_dolphin=False,
-                            slippi_address="127.0.0.1",
-                            slippi_port=51441,
-                            blocking_input=False,
-                            logger=None)
+                            is_dolphin=False)
     # Run the console
     console.run()
 
@@ -176,8 +178,6 @@ if args.predict:
     print("Connecting to console...")
     if not console.connect():
         print("ERROR: Failed to connect to the console.")
-        print("\tIf you're trying to autodiscover, local firewall settings can " +
-              "get in the way. Try specifying the address manually.")
         sys.exit(-1)
     print("...Connected")
 
@@ -185,5 +185,7 @@ if args.predict:
     while True:
         # "step" to the next frame
         gamestate = console.step()
+        if gamestate is None:
+            break
         if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
             print(model.predict(gamestate))
