@@ -26,6 +26,12 @@ parser.add_argument('--build',
                     '-b',
                     action='store_true',
                     help='Build dataset from SLP files')
+parser.add_argument('--max_split',
+                    '-m',
+                    help='Split building dataset into this many pieces')
+parser.add_argument('--split',
+                    '-s',
+                    help='Handle split number S')
 args = parser.parse_args()
 
 def who_died(past_p1, past_p2, current_p1, current_p2):
@@ -59,10 +65,20 @@ if args.build:
         .tfrecord files located in tfrecords/ folder
     """
     print("Building dataset...")
+
+    max_split, split = 1, 0
+    if args.max_split and args.split:
+        max_split, split = int(args.max_split), int(args.split)
+
     directory = 'training_data/'
     num_files = len([f for f in os.listdir(directory)if os.path.isfile(os.path.join(directory, f))])
     bar = progressbar.ProgressBar(maxval=num_files)
+    file_index = 0
     for entry in bar(os.scandir(directory)):
+        file_index += 1
+        if file_index % max_split != split:
+            continue
+
         frames = []
         if entry.path.endswith(".slp") and entry.is_file():
             console = None
