@@ -4,6 +4,7 @@ import tensorflow as tf
 import numpy as np
 import os
 
+
 def _parse_record(record):
     """Parse a batch of tfrecord data, output batch of tensors ready for training
 
@@ -42,24 +43,30 @@ def _parse_record(record):
     p2percent = tf.expand_dims(parsed["player2_percent"], 1)
     p2stock = tf.expand_dims(parsed["player2_stock"], 1)
 
-    final = tf.concat([p1character,
-                    p2character,
-                    stage,
-                    p1x,
-                    p1y,
-                    p1percent,
-                    p1stock,
-                    p2x,
-                    p2y,
-                    p2percent,
-                    p2stock,
-                    ], 1)
+    final = tf.concat(
+        [
+            p1character,
+            p2character,
+            stage,
+            p1x,
+            p1y,
+            p1percent,
+            p1stock,
+            p2x,
+            p2y,
+            p2percent,
+            p2stock,
+        ],
+        1,
+    )
 
     return final, parsed["game_winner"]
+
 
 class AdvantageBarModel:
     """Tensorflow model for the advantage bar
     """
+
     def __init__(self):
         """AdvantageBarModel
 
@@ -77,6 +84,7 @@ class AdvantageBarModel:
             (float): Stock of player 2
         """
         # Build the model
+        self.gamehistory = []
         self.model = tf.keras.Sequential()
         self.model.add(tf.keras.layers.InputLayer(input_shape=(66,)))
         self.model.add(tf.keras.layers.Dense(128, activation="relu"))
@@ -87,10 +95,16 @@ class AdvantageBarModel:
         self.model.add(tf.keras.layers.Dropout(0.2))
         self.model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
 
-        self.model.compile(optimizer=tf.keras.optimizers.Adam(0.0010),
-                           loss="binary_crossentropy",
-                           metrics=["accuracy"])
+        self.model.compile(
+            optimizer=tf.keras.optimizers.Adam(0.0010),
+            loss="binary_crossentropy",
+            metrics=["accuracy"],
+        )
         print(self.model.summary())
+
+    def reset_gamehistory(self):
+        """resets the gamehistory for predicting or training on a new game"""
+        self.gamehistory = []
 
     def load(self):
         """Load weights for the model from file"""
@@ -122,7 +136,7 @@ class AdvantageBarModel:
         SHUFFLE_BUFFER_SIZE = 100
         # This is about a 20% split for ~1000 SLP files
         # TODO any way to make this dynamic? Maybe extrapolate from the number of tfrecords
-        VALIDATION_SIZE = 15720000
+        VALIDATION_SIZE = 0.2 * len(training_files)
 
         # The operatons below happen as part of the tf.data pipeline
         training_data = training_data.shuffle(SHUFFLE_BUFFER_SIZE)
@@ -137,33 +151,36 @@ class AdvantageBarModel:
         dataset_validation = dataset_validation.map(_parse_record)
         eval_data = eval_data.map(_parse_record)
 
-        self.model.fit(dataset_train,
-                       validation_data=dataset_validation,
-                       epochs=epochs)
+        self.model.fit(dataset_train, validation_data=dataset_validation, epochs=epochs)
         self.model.evaluate(eval_data)
 
-
     def predict(self, gamestate):
-        """Given a single libmelee gamestate, make a prediction"""
+        """Given a history of libmelee gamestates, make a prediction"""
+
         p1character = tf.one_hot(gamestate.player[1].character.value, 26).numpy()
         p2character = tf.one_hot(gamestate.player[2].character.value, 26).numpy()
-        stage = tf.one_hot(AdvantageBarModel.stage_flatten(gamestate.stage.value), 6).numpy()
+        stage = tf.one_hot(
+            AdvantageBarModel.stage_flatten(gamestate.stage.value), 6
+        ).numpy()
 
-        input_array = np.concatenate([
-            p1character,
-            p2character,
-            stage,
-            [gamestate.player[1].x],
-            [gamestate.player[1].y],
-            [gamestate.player[1].percent],
-            [gamestate.player[1].stock],
-            [gamestate.player[2].x],
-            [gamestate.player[2].y],
-            [gamestate.player[2].percent],
-            [gamestate.player[2].stock],
-        ])
+        features_array = np.concatenate(
+            [
+                p1character,
+                p2character,
+                stage,
+                [gamestate.player[1].x],
+                [gamestate.player[1].y],
+                [gamestate.player[1].percent],
+                [gamestate.player[1].stock],
+                [gamestate.player[2].x],
+                [gamestate.player[2].y],
+                [gamestate.player[2].percent],
+                [gamestate.player[2].stock],
+            ]
+        )
 
-        input_array = np.array([input_array,])
+        features_array = np.array([features_array,])
+        self.gamehistory.append(features_array)
 
         prediction = self.model.predict(input_array)
         return prediction

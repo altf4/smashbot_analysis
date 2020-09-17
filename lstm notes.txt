@@ -1,0 +1,11 @@
+If an entire game is used to predict the winner, it will no doubt learn that the person 
+closest to losing their last stock determines the winner so if a data point is a single
+game, it will bias its learning to the end of the game and get 100% accuracy, but in
+real time it will not have access to that.
+
+So for each game, it should be broken into several records.  Probably 5 seconds at a 
+time, 2 frames per second, but also right padded so that almost the entire game 
+history can be taken into account.  
+
+500 time steps per record, and using 2 frames per second, the time length for input is
+just over 4 minutes.  Matches that go longer will truncate from the beginning of the match.
