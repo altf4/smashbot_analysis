@@ -143,3 +143,4 @@ savedmodel/*
 *.npz
 *.tfrecord
 scratch*
+Logs/
