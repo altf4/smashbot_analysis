@@ -55,7 +55,7 @@ def _parse_record(record):
                     p2stock,
                     ], 1)
 
-    return final, parsed["game_winner"]
+    return final, parsed["stock_winner"]
 
 class AdvantageBarModel:
     """Tensorflow model for the advantage bar
@@ -122,7 +122,7 @@ class AdvantageBarModel:
         SHUFFLE_BUFFER_SIZE = 100
         # This is about a 20% split for ~1000 SLP files
         # TODO any way to make this dynamic? Maybe extrapolate from the number of tfrecords
-        VALIDATION_SIZE = 15720000
+        VALIDATION_SIZE = 157200
 
         # The operatons below happen as part of the tf.data pipeline
         training_data = training_data.shuffle(SHUFFLE_BUFFER_SIZE)

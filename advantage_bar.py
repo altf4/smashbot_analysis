@@ -77,6 +77,7 @@ if args.build:
                 print("Got error, skipping file", ex)
                 continue
             stocks = (4,4)
+            ports = None
             # Pick a game to be part of the evaluation set 20% of the time
             is_evaluation = random.random() > 0.8
             # Temp holder of frames, until a stock is lost
@@ -93,20 +94,34 @@ if args.build:
                             game_winner = 1
                         break
                     else:
+                        # Only do this once per game
+                        if ports is None:
+                            ports = []
+                            for port, _ in gamestate.player.items():
+                                ports.append(port)
+                            if len(ports) != 2:
+                                print("Error: Game had ", len(ports), "players")
+                                break
+                            ports = tuple(ports)
+
+                        # Player one and two, but not necessarily those ports
+                        player_one = gamestate.player[ports[0]]
+                        player_two = gamestate.player[ports[1]]
+
                         # Save the data in this frame for later. We don't know the label yet
                         frame = {
-                            "player1_character": gamestate.player[1].character.value,
-                            "player1_x": gamestate.player[1].x,
-                            "player1_y": gamestate.player[1].y,
-                            "player1_percent": gamestate.player[1].percent,
-                            "player1_stock": gamestate.player[1].stock,
-                            "player1_action": gamestate.player[1].action.value,
-                            "player2_x": gamestate.player[2].x,
-                            "player2_y": gamestate.player[2].y,
-                            "player2_percent": gamestate.player[2].percent,
-                            "player2_stock": gamestate.player[2].stock,
-                            "player2_action": gamestate.player[2].action.value,
-                            "player2_character": gamestate.player[1].character.value,
+                            "player1_character": player_one.character.value,
+                            "player1_x": player_one.x,
+                            "player1_y": player_one.y,
+                            "player1_percent": player_one.percent,
+                            "player1_stock": player_one.stock,
+                            "player1_action": player_one.action.value,
+                            "player2_x": player_two.x,
+                            "player2_y": player_two.y,
+                            "player2_percent": player_two.percent,
+                            "player2_stock": player_two.stock,
+                            "player2_action": player_two.action.value,
+                            "player2_character": player_one.character.value,
                             "stage": AdvantageBarModel.stage_flatten(gamestate.stage.value),
                             "frame": gamestate.frame,
                             "stock_winner": -1
@@ -114,19 +129,19 @@ if args.build:
                         frames_temp.append(frame)
 
                         # Did someone lose a stock? Add the labels on
-                        died = who_died(stocks[0], stocks[1], gamestate.player[1].stock, gamestate.player[2].stock)
+                        died = who_died(stocks[0], stocks[1], player_one.stock, player_two.stock)
                         if died > -1:
                             for frame in frames_temp:
                                 frame["stock_winner"] = died
                                 frames.append(frame)
                             frames_temp = []
 
-                        stocks = (gamestate.player[1].stock, gamestate.player[2].stock)
+                        stocks = (player_one.stock, player_two.stock)
             except melee.console.SlippiVersionTooLow as ex:
                 print("Slippi version too low", ex)
-            except Exception as ex:
-                print("Error processing file", ex)
-                continue
+            # except Exception as ex:
+            #     print("Error processing file", ex)
+            #     continue
 
             filename = None
             if is_evaluation:
