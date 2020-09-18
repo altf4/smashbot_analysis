@@ -4,16 +4,22 @@ import tensorflow as tf
 import numpy as np
 import os
 
-def _parse_record(record):
+def _parse_winner(record):
+    context_feature_map = {
+        "game_winner": tf.io.FixedLenFeature([], dtype=tf.float32),
+    }
+    ctx, _ = tf.io.parse_single_sequence_example(record,
+                                              sequence_features=None,
+                                              context_features=context_feature_map)
+
+    return ctx["game_winner"]
+
+def _parse_features(record):
     """Parse a batch of tfrecord data, output batch of tensors ready for training
 
     This is for use with tf.data, so everything here has to be executed as a tensorflow op.
     You can't do arbitrary python in this function.
     """
-
-    context_feature_map = {
-        "game_winner": tf.io.FixedLenFeature([], dtype=tf.float32),
-    }
     feature_map = {
         "player1_character": tf.io.FixedLenSequenceFeature([], dtype=tf.int64),
         "player1_x": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
@@ -29,9 +35,9 @@ def _parse_record(record):
         "stock_winner": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
     }
 
-    ctx, parsed = tf.io.parse_single_sequence_example(record,
+    _, parsed = tf.io.parse_single_sequence_example(record,
                                                       sequence_features=feature_map,
-                                                      context_features=context_feature_map)
+                                                      context_features=None)
 
     p1character = tf.one_hot(parsed["player1_character"], 26)
     p2character = tf.one_hot(parsed["player2_character"], 26)
@@ -59,8 +65,7 @@ def _parse_record(record):
                     p2percent,
                     p2stock,
                     ], 1)
-
-    return final, ctx["game_winner"]
+    return final
 
 class AdvantageBarModel:
     """Tensorflow model for the advantage bar
@@ -136,28 +141,48 @@ class AdvantageBarModel:
         dataset_validation = training_data.take(VALIDATION_SIZE)
         dataset_train = training_data.skip(VALIDATION_SIZE)
 
-        # Parse the tfrecord file into tensors
-        dataset_train = dataset_train.map(_parse_record)
-        dataset_validation = dataset_validation.map(_parse_record)
-        eval_data = eval_data.map(_parse_record)
+        # Parse the tfrecord file into tensor datasets
+        dataset_train_features = dataset_train.map(_parse_features)
+        dataset_train_labels = dataset_train.map(_parse_winner)
+        dataset_validation_features = dataset_validation.map(_parse_features)
+        dataset_validation_labels = dataset_validation.map(_parse_winner)
+        eval_data_features = eval_data.map(_parse_features)
+        eval_data_labels = eval_data.map(_parse_winner)
 
-        # # Window the data
-        # dataset_train = dataset_train.window(self._TIME_LENGTH)
-        # dataset_validation = dataset_validation.window(self._TIME_LENGTH)
-        # eval_data = eval_data.window(self._TIME_LENGTH)
-
-        print("PRINTING")
-        for thing in dataset_train:
+        # This part is working
+        print("Printing features")
+        for thing in dataset_train_features:
             print(thing)
+
+        print("Printing labels")
+        for thing in dataset_train_labels:
+            print(thing)
+
+        # Window the data
+        # XXX I think this should work, but it doesn't? It's always empty :(
+        dataset_train_features = dataset_train_features.window(self._TIME_LENGTH, drop_remainder=True)
+        dataset_train_features = dataset_train_features.flat_map(lambda window: window.batch(self._BATCH_SIZE))
+
+        dataset_validation_features = dataset_validation_features.window(self._TIME_LENGTH, drop_remainder=True)
+        dataset_validation_features = dataset_validation_features.flat_map(lambda window: window.batch(self._BATCH_SIZE))
+
+        eval_data_features = eval_data_features.window(self._TIME_LENGTH, drop_remainder=True)
+        eval_data_features = eval_data_features.flat_map(lambda window: window.batch(self._BATCH_SIZE))
 
         # dataset_train = dataset_train.batch(self._BATCH_SIZE)
         # dataset_validation = dataset_validation.batch(self._BATCH_SIZE)
         # eval_data = eval_data.batch(self._BATCH_SIZE)
 
-        self.model.fit(dataset_train,
-                       validation_data=dataset_validation,
+        # Zip the datasets back together
+        # TODO The sizes on these are probably wrong. I bet the zips won't match up
+        training_set = tf.data.Dataset.zip((dataset_train_features, dataset_train_labels))
+        validation_set = tf.data.Dataset.zip((dataset_validation_features, dataset_validation_labels))
+        eval_set = tf.data.Dataset.zip((eval_data_features, eval_data_labels))
+
+        self.model.fit(training_set,
+                       validation_data=validation_set,
                        epochs=epochs)
-        self.model.evaluate(eval_data)
+        self.model.evaluate(eval_set)
 
 
     def predict(self, gamestate):
