@@ -10,23 +10,28 @@ def _parse_record(record):
     This is for use with tf.data, so everything here has to be executed as a tensorflow op.
     You can't do arbitrary python in this function.
     """
+
+    context_feature_map = {
+        "game_winner": tf.io.FixedLenFeature([], dtype=tf.float32),
+    }
     feature_map = {
-        "player1_character": tf.io.FixedLenFeature([], dtype=tf.int64),
-        "player1_x": tf.io.FixedLenFeature([], dtype=tf.float32),
-        "player1_y": tf.io.FixedLenFeature([], dtype=tf.float32),
-        "player1_percent": tf.io.FixedLenFeature([], dtype=tf.float32),
-        "player1_stock": tf.io.FixedLenFeature([], dtype=tf.float32),
-        "player2_x": tf.io.FixedLenFeature([], dtype=tf.float32),
-        "player2_y": tf.io.FixedLenFeature([], dtype=tf.float32),
-        "player2_percent": tf.io.FixedLenFeature([], dtype=tf.float32),
-        "player2_character": tf.io.FixedLenFeature([], dtype=tf.int64),
-        "player2_stock": tf.io.FixedLenFeature([], dtype=tf.float32),
-        "stage": tf.io.FixedLenFeature([], dtype=tf.int64),
-        "stock_winner": tf.io.FixedLenFeature([], dtype=tf.int64),
-        "game_winner": tf.io.FixedLenFeature([], dtype=tf.int64),
+        "player1_character": tf.io.FixedLenSequenceFeature([], dtype=tf.int64),
+        "player1_x": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
+        "player1_y": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
+        "player1_percent": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
+        "player1_stock": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
+        "player2_x": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
+        "player2_y": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
+        "player2_percent": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
+        "player2_character": tf.io.FixedLenSequenceFeature([], dtype=tf.int64),
+        "player2_stock": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
+        "stage": tf.io.FixedLenSequenceFeature([], dtype=tf.int64),
+        "stock_winner": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
     }
 
-    parsed = tf.io.parse_example(record, feature_map)
+    ctx, parsed = tf.io.parse_single_sequence_example(record,
+                                                      sequence_features=feature_map,
+                                                      context_features=context_feature_map)
 
     p1character = tf.one_hot(parsed["player1_character"], 26)
     p2character = tf.one_hot(parsed["player2_character"], 26)
@@ -55,7 +60,7 @@ def _parse_record(record):
                     p2stock,
                     ], 1)
 
-    return final, parsed["stock_winner"]
+    return final, ctx["game_winner"]
 
 class AdvantageBarModel:
     """Tensorflow model for the advantage bar
@@ -76,10 +81,13 @@ class AdvantageBarModel:
             (float): Damage of player 2
             (float): Stock of player 2
         """
+        self._BATCH_SIZE = 10
+        self._TIME_LENGTH = 20
+
         # Build the model
         self.model = tf.keras.Sequential()
-        self.model.add(tf.keras.layers.InputLayer(input_shape=(66,)))
-        self.model.add(tf.keras.layers.Dense(128, activation="relu"))
+        self.model.add(tf.keras.layers.InputLayer(input_shape=(self._TIME_LENGTH, 66,)))
+        self.model.add(tf.keras.layers.LSTM(128))
         self.model.add(tf.keras.layers.Dropout(0.2))
         self.model.add(tf.keras.layers.Dense(64, activation="relu"))
         self.model.add(tf.keras.layers.Dropout(0.2))
@@ -118,24 +126,33 @@ class AdvantageBarModel:
         training_data = tf.data.TFRecordDataset(training_files)
         eval_data = tf.data.TFRecordDataset(eval_files)
 
-        BATCH_SIZE = 10000
-        SHUFFLE_BUFFER_SIZE = 100
+        SHUFFLE_BUFFER_SIZE = 1
         # This is about a 20% split for ~1000 SLP files
         # TODO any way to make this dynamic? Maybe extrapolate from the number of tfrecords
-        VALIDATION_SIZE = 157200
+        VALIDATION_SIZE = 10
 
         # The operatons below happen as part of the tf.data pipeline
         training_data = training_data.shuffle(SHUFFLE_BUFFER_SIZE)
         dataset_validation = training_data.take(VALIDATION_SIZE)
         dataset_train = training_data.skip(VALIDATION_SIZE)
 
-        dataset_train = dataset_train.batch(BATCH_SIZE)
-        dataset_validation = dataset_validation.batch(BATCH_SIZE)
-        eval_data = eval_data.batch(BATCH_SIZE)
-
+        # Parse the tfrecord file into tensors
         dataset_train = dataset_train.map(_parse_record)
         dataset_validation = dataset_validation.map(_parse_record)
         eval_data = eval_data.map(_parse_record)
+
+        # # Window the data
+        # dataset_train = dataset_train.window(self._TIME_LENGTH)
+        # dataset_validation = dataset_validation.window(self._TIME_LENGTH)
+        # eval_data = eval_data.window(self._TIME_LENGTH)
+
+        print("PRINTING")
+        for thing in dataset_train:
+            print(thing)
+
+        # dataset_train = dataset_train.batch(self._BATCH_SIZE)
+        # dataset_validation = dataset_validation.batch(self._BATCH_SIZE)
+        # eval_data = eval_data.batch(self._BATCH_SIZE)
 
         self.model.fit(dataset_train,
                        validation_data=dataset_validation,

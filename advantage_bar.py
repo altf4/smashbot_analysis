@@ -43,13 +43,10 @@ def who_died(past_p1, past_p2, current_p1, current_p2):
     return -1
 
 def _float_feature(value):
-  """Returns a float_list from a float / double."""
-  return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
-
+  return tf.train.FeatureList(feature=[tf.train.Feature(float_list=tf.train.FloatList(value=[x])) for x in value])
 
 def _int64_feature(value):
-  """Returns an int64_list from a bool / enum / int / uint."""
-  return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+  return tf.train.FeatureList(feature=[tf.train.Feature(int64_list=tf.train.Int64List(value=[x])) for x in value])
 
 if args.build:
     """Builds the tfrecord dataset
@@ -79,7 +76,24 @@ if args.build:
         if file_index % max_split != split:
             continue
 
-        frames = []
+        frames = {
+            "player1_character": [],
+            "player1_x": [],
+            "player1_y": [],
+            "player1_percent": [],
+            "player1_stock": [],
+            "player1_action": [],
+            "player2_x": [],
+            "player2_y": [],
+            "player2_percent": [],
+            "player2_stock": [],
+            "player2_action": [],
+            "player2_character": [],
+            "stage": [],
+            "frame": [],
+            "stock_winner": [],
+            "game_winner": []
+        }
         if entry.path.endswith(".slp") and entry.is_file():
             console = None
             try:
@@ -96,8 +110,7 @@ if args.build:
             ports = None
             # Pick a game to be part of the evaluation set 20% of the time
             is_evaluation = random.random() > 0.8
-            # Temp holder of frames, until a stock is lost
-            frames_temp = []
+
             game_winner = -1
             try:
                 # Iterate through each frame of the game
@@ -116,7 +129,6 @@ if args.build:
                             for port, _ in gamestate.player.items():
                                 ports.append(port)
                             if len(ports) != 2:
-                                print("Error: Game had ", len(ports), "players")
                                 break
                             ports = tuple(ports)
 
@@ -124,40 +136,34 @@ if args.build:
                         player_one = gamestate.player[ports[0]]
                         player_two = gamestate.player[ports[1]]
 
-                        # Save the data in this frame for later. We don't know the label yet
-                        frame = {
-                            "player1_character": player_one.character.value,
-                            "player1_x": player_one.x,
-                            "player1_y": player_one.y,
-                            "player1_percent": player_one.percent,
-                            "player1_stock": player_one.stock,
-                            "player1_action": player_one.action.value,
-                            "player2_x": player_two.x,
-                            "player2_y": player_two.y,
-                            "player2_percent": player_two.percent,
-                            "player2_stock": player_two.stock,
-                            "player2_action": player_two.action.value,
-                            "player2_character": player_one.character.value,
-                            "stage": AdvantageBarModel.stage_flatten(gamestate.stage.value),
-                            "frame": gamestate.frame,
-                            "stock_winner": -1
-                        }
-                        frames_temp.append(frame)
+                        # Put the frame's data in. We don't know the label yet though
+                        frames["player1_character"].append(player_one.character.value)
+                        frames["player1_x"].append(player_one.x)
+                        frames["player1_y"].append(player_one.y)
+                        frames["player1_percent"].append(player_one.percent)
+                        frames["player1_stock"].append(player_one.stock)
+                        frames["player1_action"].append(player_one.action.value)
+                        frames["player2_x"].append(player_two.x)
+                        frames["player2_y"].append(player_two.y)
+                        frames["player2_percent"].append(player_two.percent)
+                        frames["player2_stock"].append(player_two.stock)
+                        frames["player2_action"].append(player_two.action.value)
+                        frames["player2_character"].append(player_one.character.value)
+                        frames["stage"].append(AdvantageBarModel.stage_flatten(gamestate.stage.value))
+                        frames["frame"].append(gamestate.frame)
 
                         # Did someone lose a stock? Add the labels on
                         died = who_died(stocks[0], stocks[1], player_one.stock, player_two.stock)
                         if died > -1:
-                            for frame in frames_temp:
-                                frame["stock_winner"] = died
-                                frames.append(frame)
-                            frames_temp = []
-
+                            frames_needed = len(frames["frame"]) - len(frames["stock_winner"])
+                            frames["stock_winner"].extend([died] * frames_needed)
                         stocks = (player_one.stock, player_two.stock)
+
             except melee.console.SlippiVersionTooLow as ex:
                 print("Slippi version too low", ex)
-            # except Exception as ex:
-            #     print("Error processing file", ex)
-            #     continue
+            except Exception as ex:
+                print("Error processing file", ex)
+                continue
 
             filename = None
             if is_evaluation:
@@ -166,26 +172,33 @@ if args.build:
                 filename = "tfrecords/train" /  pathlib.Path(pathlib.Path(entry.path + ".tfrecord").name)
             if len(frames) > 0 and game_winner > -1:
                 with tf.io.TFRecordWriter(str(filename)) as file_writer:
-                    for frame in frames:
-                        newframe = tf.train.Example(features=tf.train.Features(feature={
-                            "player1_character": _int64_feature(frame["player1_character"]),
-                            "player1_x": _float_feature(frame["player1_x"]),
-                            "player1_y": _float_feature(frame["player1_y"]),
-                            "player1_percent": _float_feature(frame["player1_percent"]),
-                            "player1_stock": _float_feature(frame["player1_stock"]),
-                            "player1_action": _int64_feature(frame["player1_action"]),
-                            "player2_x": _float_feature(frame["player2_x"]),
-                            "player2_y": _float_feature(frame["player2_y"]),
-                            "player2_percent": _float_feature(frame["player2_percent"]),
-                            "player2_stock": _float_feature(frame["player2_stock"]),
-                            "player2_action": _int64_feature(frame["player2_action"]),
-                            "player2_character": _int64_feature(frame["player2_character"]),
-                            "stage": _int64_feature(frame["stage"]),
-                            "frame": _float_feature(frame["frame"]),
-                            "stock_winner": _int64_feature(frame["stock_winner"]),
-                            "game_winner": _int64_feature(game_winner),
-                        }))
-                        file_writer.write(newframe.SerializeToString())
+                    # This is all that we actually have full data for
+                    data_cap = len(frames["stock_winner"])
+
+                    # "Context" features are static for the whole data record. Not in the time series
+                    context_features = tf.train.Features(feature={
+                        "game_winner": tf.train.Feature(float_list=tf.train.FloatList(value=[game_winner]))
+                    })
+
+                    features = {
+                        "player1_character": _int64_feature(frames["player1_character"][:data_cap]),
+                        "player1_x": _float_feature(frames["player1_x"][:data_cap]),
+                        "player1_y": _float_feature(frames["player1_y"][:data_cap]),
+                        "player1_percent": _float_feature(frames["player1_percent"][:data_cap]),
+                        "player1_stock": _float_feature(frames["player1_stock"][:data_cap]),
+                        "player1_action": _int64_feature(frames["player1_action"][:data_cap]),
+                        "player2_x": _float_feature(frames["player2_x"][:data_cap]),
+                        "player2_y": _float_feature(frames["player2_y"][:data_cap]),
+                        "player2_percent": _float_feature(frames["player2_percent"][:data_cap]),
+                        "player2_stock": _float_feature(frames["player2_stock"][:data_cap]),
+                        "player2_action": _int64_feature(frames["player2_action"][:data_cap]),
+                        "player2_character": _int64_feature(frames["player2_character"][:data_cap]),
+                        "stage": _int64_feature(frames["stage"][:data_cap]),
+                        "frame": _float_feature(frames["frame"][:data_cap]),
+                        "stock_winner": _float_feature(frames["stock_winner"][:data_cap]),
+                    }
+                    newexample = tf.train.SequenceExample(feature_lists=tf.train.FeatureLists(feature_list=features), context=context_features)
+                    file_writer.write(newexample.SerializeToString())
 
 if args.train:
     print("Training...")
