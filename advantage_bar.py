@@ -177,7 +177,8 @@ if args.build:
 
                     # "Context" features are static for the whole data record. Not in the time series
                     context_features = tf.train.Features(feature={
-                        "game_winner": tf.train.Feature(float_list=tf.train.FloatList(value=[game_winner]))
+                        "game_winner": tf.train.Feature(float_list=tf.train.FloatList(value=[game_winner])),
+                        "length": tf.train.Feature(int64_list=tf.train.Int64List(value=[data_cap]))
                     })
 
                     features = {

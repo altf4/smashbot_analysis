@@ -4,15 +4,26 @@ import tensorflow as tf
 import numpy as np
 import os
 
-def _parse_winner(record):
+def _parse_labels(record):
+    """Parses a record and makes a tensor of the right length containing labels"""
     context_feature_map = {
         "game_winner": tf.io.FixedLenFeature([], dtype=tf.float32),
+        "length":  tf.io.FixedLenFeature([], dtype=tf.int64)
     }
     ctx, _ = tf.io.parse_single_sequence_example(record,
                                               sequence_features=None,
                                               context_features=context_feature_map)
+    winner = ctx["game_winner"]
+    length = ctx["length"]
 
-    return ctx["game_winner"]
+    # The number of labels we need is the number of windows that will be made
+    #   Which is length
+    # TODO make 480 dynamic
+    window_count = tf.math.subtract(length, 480)
+    window_count = tf.math.add(window_count, 1)
+
+    labels = tf.repeat(winner, length)
+    return labels
 
 def _parse_features(record):
     """Parse a batch of tfrecord data, output batch of tensors ready for training
@@ -93,8 +104,8 @@ class AdvantageBarModel:
             (float): Damage of player 2
             (float): Stock of player 2
         """
-        self._BATCH_SIZE = 10
-        self._TIME_LENGTH = 20
+        self._BATCH_SIZE = 1
+        self._TIME_LENGTH = 480
 
         # Build the model
         self.model = tf.keras.Sequential()
@@ -139,9 +150,7 @@ class AdvantageBarModel:
         eval_data = tf.data.TFRecordDataset(eval_files)
 
         SHUFFLE_BUFFER_SIZE = 1
-        # This is about a 20% split for ~1000 SLP files
-        # TODO any way to make this dynamic? Maybe extrapolate from the number of tfrecords
-        VALIDATION_SIZE = 10
+        VALIDATION_SIZE = len(training_files) // 5
 
         # The operatons below happen as part of the tf.data pipeline
         training_data = training_data.shuffle(SHUFFLE_BUFFER_SIZE)
@@ -150,44 +159,38 @@ class AdvantageBarModel:
 
         # Parse the tfrecord file into tensor datasets
         dataset_train_features = dataset_train.map(_parse_features)
-        dataset_train_labels = dataset_train.map(_parse_winner)
+        dataset_train_labels = dataset_train.map(_parse_labels)
         dataset_validation_features = dataset_validation.map(_parse_features)
-        dataset_validation_labels = dataset_validation.map(_parse_winner)
+        dataset_validation_labels = dataset_validation.map(_parse_labels)
         eval_data_features = eval_data.map(_parse_features)
-        eval_data_labels = eval_data.map(_parse_winner)
-
-        # This part is working
-        # print("Printing features")
-        # for thing in dataset_train_features:
-        #     print(thing)
-        #
-        # print("Printing labels")
-        # for thing in dataset_train_labels:
-        #     print(thing)
+        eval_data_labels = eval_data.map(_parse_labels)
 
         # Window the data
         dataset_train_features = dataset_train_features.flat_map(lambda x: _window(x, self._TIME_LENGTH))
-        # YAY! This now contains a whole ton of time series of size (self._TIME_LENGTH, 66)
+        dataset_validation_features = dataset_validation_features.flat_map(lambda x: _window(x, self._TIME_LENGTH))
+        eval_data_features = eval_data_features.flat_map(lambda x: _window(x, self._TIME_LENGTH))
+
+        total = 0
+        for thing in dataset_train_labels:
+            total += len(thing)
+            print("label tensor", thing)
+        print("Total number of labels", total)
+
+        i = 0
         for thing in dataset_train_features:
-            print(thing)
-
-        dataset_train_features = dataset_train_features.flat_map(lambda window: window.batch(self._BATCH_SIZE))
-
-        dataset_validation_features = dataset_validation_features.window(self._TIME_LENGTH, drop_remainder=True)
-        dataset_validation_features = dataset_validation_features.flat_map(lambda window: window.batch(self._BATCH_SIZE))
-
-        eval_data_features = eval_data_features.window(self._TIME_LENGTH, drop_remainder=True)
-        eval_data_features = eval_data_features.flat_map(lambda window: window.batch(self._BATCH_SIZE))
-
-        # dataset_train = dataset_train.batch(self._BATCH_SIZE)
-        # dataset_validation = dataset_validation.batch(self._BATCH_SIZE)
-        # eval_data = eval_data.batch(self._BATCH_SIZE)
+            i+=1
+        print("Total number of data points", i)
+        print("These numbers should match, but don't quite...")
 
         # Zip the datasets back together
         # TODO The sizes on these are probably wrong. I bet the zips won't match up
         training_set = tf.data.Dataset.zip((dataset_train_features, dataset_train_labels))
         validation_set = tf.data.Dataset.zip((dataset_validation_features, dataset_validation_labels))
         eval_set = tf.data.Dataset.zip((eval_data_features, eval_data_labels))
+
+        training_set = training_set.batch(self._BATCH_SIZE)
+        validation_set = validation_set.batch(self._BATCH_SIZE)
+        eval_set = eval_set.batch(self._BATCH_SIZE)
 
         self.model.fit(training_set,
                        validation_data=validation_set,
