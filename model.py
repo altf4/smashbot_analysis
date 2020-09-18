@@ -5,16 +5,23 @@ import numpy as np
 import os
 
 
-def _parse_record(record):
+def _parse_winner(record):
+    context_feature_map = {
+        "game_winner": tf.io.FixedLenFeature([], dtype=tf.float32),
+    }
+    ctx, _ = tf.io.parse_single_sequence_example(
+        record, sequence_features=None, context_features=context_feature_map
+    )
+
+    return ctx["game_winner"]
+
+
+def _parse_features(record):
     """Parse a batch of tfrecord data, output batch of tensors ready for training
 
     This is for use with tf.data, so everything here has to be executed as a tensorflow op.
     You can't do arbitrary python in this function.
     """
-
-    context_feature_map = {
-        "game_winner": tf.io.FixedLenFeature([], dtype=tf.float32),
-    }
     feature_map = {
         "player1_character": tf.io.FixedLenSequenceFeature([], dtype=tf.int64),
         "player1_x": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
@@ -30,8 +37,8 @@ def _parse_record(record):
         "stock_winner": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
     }
 
-    ctx, parsed = tf.io.parse_single_sequence_example(
-        record, sequence_features=feature_map, context_features=context_feature_map
+    _, parsed = tf.io.parse_single_sequence_example(
+        record, sequence_features=feature_map, context_features=None
     )
 
     p1character = tf.one_hot(parsed["player1_character"], 26)
@@ -64,8 +71,7 @@ def _parse_record(record):
         ],
         1,
     )
-
-    return final, ctx["game_winner"]
+    return final
 
 
 class AdvantageBarModel:
@@ -89,13 +95,11 @@ class AdvantageBarModel:
             (float): Stock of player 2
         """
         self._BATCH_SIZE = 10
-        self._TIME_LENGTH = 20
+        self._TIME_LENGTH = 10
 
         # Build the model
-        self.gamehistory = []
         self.model = tf.keras.Sequential()
-        self.model.add(tf.keras.layers.InputLayer(input_shape=(self._TIME_LENGTH, 66,)))
-        self.model.add(tf.keras.layers.LSTM(128))
+        self.model.add(tf.keras.layers.LSTM(128, input_shape=(self._TIME_LENGTH, 66,)))
         self.model.add(tf.keras.layers.Dropout(0.2))
         self.model.add(tf.keras.layers.Dense(64, activation="relu"))
         self.model.add(tf.keras.layers.Dropout(0.2))
@@ -109,10 +113,6 @@ class AdvantageBarModel:
             metrics=["accuracy"],
         )
         print(self.model.summary())
-
-    def reset_gamehistory(self):
-        """resets the gamehistory for predicting or training on a new game"""
-        self.gamehistory = []
 
     def load(self):
         """Load weights for the model from file"""
@@ -132,11 +132,10 @@ class AdvantageBarModel:
             eval/
                 *.tfrecord
         """
-
-        train_dir = os.listdir("tfrecords/train/")
-        training_files = ["tfrecords/train/" + s for s in train_dir]
-        eval_dir = os.listdir("tfrecords/eval/")
-        eval_files = ["tfrecords/eval/" + s for s in eval_dir]
+        dir = os.listdir("tfrecords/train/")
+        training_files = ["tfrecords/train/" + s for s in dir]
+        dir = os.listdir("tfrecords/eval/")
+        eval_files = ["tfrecords/eval/" + s for s in dir]
 
         training_data = tf.data.TFRecordDataset(training_files)
         eval_data = tf.data.TFRecordDataset(eval_files)
@@ -151,37 +150,79 @@ class AdvantageBarModel:
         dataset_validation = training_data.take(VALIDATION_SIZE)
         dataset_train = training_data.skip(VALIDATION_SIZE)
 
-        # Parse the tfrecord file into tensors
-        dataset_train = dataset_train.map(_parse_record)
-        dataset_validation = dataset_validation.map(_parse_record)
-        eval_data = eval_data.map(_parse_record)
+        # Parse the tfrecord file into tensor datasets
+        dataset_train_features = dataset_train.map(_parse_features)
+        dataset_train_labels = dataset_train.map(_parse_winner)
+        dataset_validation_features = dataset_validation.map(_parse_features)
+        dataset_validation_labels = dataset_validation.map(_parse_winner)
+        eval_data_features = eval_data.map(_parse_features)
+        eval_data_labels = eval_data.map(_parse_winner)
 
-        # # Window the data
-        dataset_train = dataset_train.window(self._TIME_LENGTH)
-        dataset_validation = dataset_validation.window(self._TIME_LENGTH)
-        eval_data = eval_data.window(self._TIME_LENGTH)
-
-        print("PRINTING")
-        for thing in dataset_train:
+        # This part is working
+        print("Printing features")
+        for thing in dataset_train_features:
             print(thing)
 
-        dataset_train = dataset_train.batch(self._BATCH_SIZE)
-        dataset_validation = dataset_validation.batch(self._BATCH_SIZE)
-        eval_data = eval_data.batch(self._BATCH_SIZE)
+        print("Printing labels")
+        for thing in dataset_train_labels:
+            print(thing)
 
-        self.model.fit(dataset_train, validation_data=dataset_validation, epochs=epochs)
-        self.model.evaluate(eval_data)
+        # Window the data
+        # XXX I think this should work, but it doesn't? It's always empty :(
+        dataset_train_features = dataset_train_features.window(
+            self._TIME_LENGTH, shift=150, stride=30, drop_remainder=True
+        )
+
+        dataset_train_features = dataset_train_features.flat_map(
+            lambda window: window.batch(self._BATCH_SIZE)
+        )
+
+        dataset_validation_features = dataset_validation_features.window(
+            self._TIME_LENGTH, shift=150, stride=30, drop_remainder=True
+        )
+        dataset_validation_features = dataset_validation_features.flat_map(
+            lambda window: window.batch(self._BATCH_SIZE)
+        )
+
+        eval_data_features = eval_data_features.window(
+            self._TIME_LENGTH, shift=150, stride=30, drop_remainder=True
+        )
+        eval_data_features = eval_data_features.flat_map(
+            lambda window: window.batch(self._BATCH_SIZE)
+        )
+
+        # dataset_train = dataset_train.batch(self._BATCH_SIZE)
+        # dataset_validation = dataset_validation.batch(self._BATCH_SIZE)
+        # eval_data = eval_data.batch(self._BATCH_SIZE)
+
+        # Zip the datasets back together
+        # TODO The sizes on these are probably wrong. I bet the zips won't match up
+        training_set = tf.data.Dataset.zip(
+            (dataset_train_features, dataset_train_labels)
+        )
+        validation_set = tf.data.Dataset.zip(
+            (dataset_validation_features, dataset_validation_labels)
+        )
+        eval_set = tf.data.Dataset.zip((eval_data_features, eval_data_labels))
+
+        print("1111")
+        for thing in dataset_train_features:
+            print(type(thing))
+        for thing in dataset_train_labels:
+            print(type(thing))
+
+        self.model.fit(training_set, validation_data=validation_set, epochs=epochs)
+        self.model.evaluate(eval_set)
 
     def predict(self, gamestate):
-        """Given a history of libmelee gamestates, make a prediction"""
-
+        """Given a single libmelee gamestate, make a prediction"""
         p1character = tf.one_hot(gamestate.player[1].character.value, 26).numpy()
         p2character = tf.one_hot(gamestate.player[2].character.value, 26).numpy()
         stage = tf.one_hot(
             AdvantageBarModel.stage_flatten(gamestate.stage.value), 6
         ).numpy()
 
-        features_array = np.concatenate(
+        input_array = np.concatenate(
             [
                 p1character,
                 p2character,
@@ -197,8 +238,7 @@ class AdvantageBarModel:
             ]
         )
 
-        features_array = np.array([features_array,])
-        self.gamehistory.append(features_array)
+        input_array = np.array([input_array,])
 
         prediction = self.model.predict(input_array)
         return prediction
