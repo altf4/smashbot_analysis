@@ -124,10 +124,11 @@ class AdvantageBarModel:
             eval/
                 *.tfrecord
         """
-        dir = os.listdir("tfrecords/train/")
-        training_files = ["tfrecords/train/" + s for s in dir]
-        dir = os.listdir("tfrecords/eval/")
-        eval_files = ["tfrecords/eval/" + s for s in dir]
+
+        train_dir = os.listdir("tfrecords/train/")
+        training_files = ["tfrecords/train/" + s for s in train_dir]
+        eval_dir = os.listdir("tfrecords/eval/")
+        eval_files = ["tfrecords/eval/" + s for s in eval_dir]
 
         training_data = tf.data.TFRecordDataset(training_files)
         eval_data = tf.data.TFRecordDataset(eval_files)
