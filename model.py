@@ -77,7 +77,9 @@ def _parse_features(record):
 def _window(sequence, time_length):
     # This comes in as a tensor, so convert it to a dataset
     dataset = tf.data.Dataset.from_tensor_slices(sequence)
-    dataset = dataset.window(size=time_length, shift=1, drop_remainder=True)
+    dataset = dataset.window(
+        size=time_length, shift=150, stride=30, drop_remainder=True
+    )
     dataset = dataset.flat_map(lambda x: x.batch(time_length))
     return dataset
 
@@ -103,7 +105,7 @@ class AdvantageBarModel:
             (float): Stock of player 2
         """
         self._BATCH_SIZE = 10
-        self._TIME_LENGTH = 20
+        self._TIME_LENGTH = 10
 
         # Build the model
         self.model = tf.keras.Sequential()
@@ -180,31 +182,36 @@ class AdvantageBarModel:
         dataset_train_features = dataset_train_features.flat_map(
             lambda x: _window(x, self._TIME_LENGTH)
         )
-        # YAY! This now contains a whole ton of time series of size (self._TIME_LENGTH, 66)
-        for thing in dataset_train_features:
-            print(thing)
 
-        dataset_train_features = dataset_train_features.flat_map(
-            lambda window: window.batch(self._BATCH_SIZE)
+        dataset_train_features = dataset_train_features.map(
+            lambda x: tf.reshape(x, [1, self._TIME_LENGTH, 66])
         )
 
-        dataset_validation_features = dataset_validation_features.window(
-            self._TIME_LENGTH, drop_remainder=True
-        )
         dataset_validation_features = dataset_validation_features.flat_map(
-            lambda window: window.batch(self._BATCH_SIZE)
+            lambda x: _window(x, self._TIME_LENGTH)
         )
 
-        eval_data_features = eval_data_features.window(
-            self._TIME_LENGTH, drop_remainder=True
+        dataset_validation_features = dataset_validation_features.map(
+            lambda x: tf.reshape(x, [1, self._TIME_LENGTH, 66])
         )
+
         eval_data_features = eval_data_features.flat_map(
-            lambda window: window.batch(self._BATCH_SIZE)
+            lambda x: _window(x, self._TIME_LENGTH)
         )
 
-        # dataset_train = dataset_train.batch(self._BATCH_SIZE)
-        # dataset_validation = dataset_validation.batch(self._BATCH_SIZE)
-        # eval_data = eval_data.batch(self._BATCH_SIZE)
+        eval_data_features = eval_data_features.map(
+            lambda x: tf.reshape(x, [1, self._TIME_LENGTH, 66])
+        )
+
+        dataset_train_labels = dataset_train_labels.map(
+            lambda x: tf.reshape(x, (-1, 1))
+        )
+
+        dataset_validation_labels = dataset_validation_labels.map(
+            lambda x: tf.reshape(x, (-1, 1))
+        )
+
+        eval_data_labels = eval_data_labels.map(lambda x: tf.reshape(x, (-1, 1)))
 
         # Zip the datasets back together
         # TODO The sizes on these are probably wrong. I bet the zips won't match up
