@@ -67,6 +67,13 @@ def _parse_features(record):
                     ], 1)
     return final
 
+def _window(sequence, time_length):
+    # This comes in as a tensor, so convert it to a dataset
+    dataset = tf.data.Dataset.from_tensor_slices(sequence)
+    dataset = dataset.window(size=time_length, shift=1, drop_remainder=True)
+    dataset = dataset.flat_map(lambda x: x.batch(time_length))
+    return dataset
+
 class AdvantageBarModel:
     """Tensorflow model for the advantage bar
     """
@@ -150,17 +157,20 @@ class AdvantageBarModel:
         eval_data_labels = eval_data.map(_parse_winner)
 
         # This part is working
-        print("Printing features")
+        # print("Printing features")
+        # for thing in dataset_train_features:
+        #     print(thing)
+        #
+        # print("Printing labels")
+        # for thing in dataset_train_labels:
+        #     print(thing)
+
+        # Window the data
+        dataset_train_features = dataset_train_features.flat_map(lambda x: _window(x, self._TIME_LENGTH))
+        # YAY! This now contains a whole ton of time series of size (self._TIME_LENGTH, 66)
         for thing in dataset_train_features:
             print(thing)
 
-        print("Printing labels")
-        for thing in dataset_train_labels:
-            print(thing)
-
-        # Window the data
-        # XXX I think this should work, but it doesn't? It's always empty :(
-        dataset_train_features = dataset_train_features.window(self._TIME_LENGTH, drop_remainder=True)
         dataset_train_features = dataset_train_features.flat_map(lambda window: window.batch(self._BATCH_SIZE))
 
         dataset_validation_features = dataset_validation_features.window(self._TIME_LENGTH, drop_remainder=True)
