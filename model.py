@@ -74,6 +74,14 @@ def _parse_features(record):
     return final
 
 
+def _window(sequence, time_length):
+    # This comes in as a tensor, so convert it to a dataset
+    dataset = tf.data.Dataset.from_tensor_slices(sequence)
+    dataset = dataset.window(size=time_length, shift=1, drop_remainder=True)
+    dataset = dataset.flat_map(lambda x: x.batch(time_length))
+    return dataset
+
+
 class AdvantageBarModel:
     """Tensorflow model for the advantage bar
     """
@@ -95,11 +103,12 @@ class AdvantageBarModel:
             (float): Stock of player 2
         """
         self._BATCH_SIZE = 10
-        self._TIME_LENGTH = 10
+        self._TIME_LENGTH = 20
 
         # Build the model
         self.model = tf.keras.Sequential()
-        self.model.add(tf.keras.layers.LSTM(128, input_shape=(self._TIME_LENGTH, 66,)))
+        self.model.add(tf.keras.layers.InputLayer(input_shape=(self._TIME_LENGTH, 66,)))
+        self.model.add(tf.keras.layers.LSTM(128))
         self.model.add(tf.keras.layers.Dropout(0.2))
         self.model.add(tf.keras.layers.Dense(64, activation="relu"))
         self.model.add(tf.keras.layers.Dropout(0.2))
@@ -159,33 +168,35 @@ class AdvantageBarModel:
         eval_data_labels = eval_data.map(_parse_winner)
 
         # This part is working
-        print("Printing features")
-        for thing in dataset_train_features:
-            print(thing)
-
-        print("Printing labels")
-        for thing in dataset_train_labels:
-            print(thing)
+        # print("Printing features")
+        # for thing in dataset_train_features:
+        #     print(thing)
+        #
+        # print("Printing labels")
+        # for thing in dataset_train_labels:
+        #     print(thing)
 
         # Window the data
-        # XXX I think this should work, but it doesn't? It's always empty :(
-        dataset_train_features = dataset_train_features.window(
-            self._TIME_LENGTH, shift=150, stride=30, drop_remainder=True
+        dataset_train_features = dataset_train_features.flat_map(
+            lambda x: _window(x, self._TIME_LENGTH)
         )
+        # YAY! This now contains a whole ton of time series of size (self._TIME_LENGTH, 66)
+        for thing in dataset_train_features:
+            print(thing)
 
         dataset_train_features = dataset_train_features.flat_map(
             lambda window: window.batch(self._BATCH_SIZE)
         )
 
         dataset_validation_features = dataset_validation_features.window(
-            self._TIME_LENGTH, shift=150, stride=30, drop_remainder=True
+            self._TIME_LENGTH, drop_remainder=True
         )
         dataset_validation_features = dataset_validation_features.flat_map(
             lambda window: window.batch(self._BATCH_SIZE)
         )
 
         eval_data_features = eval_data_features.window(
-            self._TIME_LENGTH, shift=150, stride=30, drop_remainder=True
+            self._TIME_LENGTH, drop_remainder=True
         )
         eval_data_features = eval_data_features.flat_map(
             lambda window: window.batch(self._BATCH_SIZE)
@@ -204,12 +215,6 @@ class AdvantageBarModel:
             (dataset_validation_features, dataset_validation_labels)
         )
         eval_set = tf.data.Dataset.zip((eval_data_features, eval_data_labels))
-
-        print("1111")
-        for thing in dataset_train_features:
-            print(type(thing))
-        for thing in dataset_train_labels:
-            print(type(thing))
 
         self.model.fit(training_set, validation_data=validation_set, epochs=epochs)
         self.model.evaluate(eval_set)
