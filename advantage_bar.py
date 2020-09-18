@@ -175,6 +175,8 @@ if args.build:
                     # This is all that we actually have full data for
                     data_cap = len(frames["stock_winner"])
 
+                    print("\n", data_cap)
+
                     # "Context" features are static for the whole data record. Not in the time series
                     context_features = tf.train.Features(feature={
                         "game_winner": tf.train.Feature(float_list=tf.train.FloatList(value=[game_winner])),

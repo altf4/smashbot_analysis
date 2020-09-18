@@ -11,18 +11,17 @@ def _parse_labels(record):
         "length":  tf.io.FixedLenFeature([], dtype=tf.int64)
     }
     ctx, _ = tf.io.parse_single_sequence_example(record,
-                                              sequence_features=None,
-                                              context_features=context_feature_map)
+                                                 sequence_features=None,
+                                                 context_features=context_feature_map)
     winner = ctx["game_winner"]
     length = ctx["length"]
 
     # The number of labels we need is the number of windows that will be made
-    #   Which is length
+    #   Which is (length - window_size + 1) // shift
     # TODO make 480 dynamic
     window_count = tf.math.subtract(length, 480)
     window_count = tf.math.add(window_count, 1)
-
-    labels = tf.repeat(winner, length)
+    labels = tf.repeat(winner, window_count)
     return labels
 
 def _parse_features(record):
@@ -47,8 +46,8 @@ def _parse_features(record):
     }
 
     _, parsed = tf.io.parse_single_sequence_example(record,
-                                                      sequence_features=feature_map,
-                                                      context_features=None)
+                                                    sequence_features=feature_map,
+                                                    context_features=None)
 
     p1character = tf.one_hot(parsed["player1_character"], 26)
     p2character = tf.one_hot(parsed["player2_character"], 26)
@@ -104,7 +103,7 @@ class AdvantageBarModel:
             (float): Damage of player 2
             (float): Stock of player 2
         """
-        self._BATCH_SIZE = 1
+        self._BATCH_SIZE = 1000
         self._TIME_LENGTH = 480
 
         # Build the model
@@ -170,20 +169,13 @@ class AdvantageBarModel:
         dataset_validation_features = dataset_validation_features.flat_map(lambda x: _window(x, self._TIME_LENGTH))
         eval_data_features = eval_data_features.flat_map(lambda x: _window(x, self._TIME_LENGTH))
 
-        total = 0
-        for thing in dataset_train_labels:
-            total += len(thing)
-            print("label tensor", thing)
-        print("Total number of labels", total)
+        # Flatten the labels into a single stream of numbers.
+        #   Right now they're bunched together in groups of games
+        dataset_train_labels = dataset_train_labels.flat_map(lambda x: tf.data.Dataset.from_tensor_slices(x))
+        dataset_validation_labels = dataset_validation_labels.flat_map(lambda x: tf.data.Dataset.from_tensor_slices(x))
+        eval_data_labels = eval_data_labels.flat_map(lambda x: tf.data.Dataset.from_tensor_slices(x))
 
-        i = 0
-        for thing in dataset_train_features:
-            i+=1
-        print("Total number of data points", i)
-        print("These numbers should match, but don't quite...")
-
-        # Zip the datasets back together
-        # TODO The sizes on these are probably wrong. I bet the zips won't match up
+        # Zip the feature and label datasets back together
         training_set = tf.data.Dataset.zip((dataset_train_features, dataset_train_labels))
         validation_set = tf.data.Dataset.zip((dataset_validation_features, dataset_validation_labels))
         eval_set = tf.data.Dataset.zip((eval_data_features, eval_data_labels))
