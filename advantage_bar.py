@@ -170,7 +170,8 @@ if args.build:
                 filename = "tfrecords/eval" / pathlib.Path(pathlib.Path(entry.path + ".tfrecord").name)
             else:
                 filename = "tfrecords/train" /  pathlib.Path(pathlib.Path(entry.path + ".tfrecord").name)
-            if len(frames) > 0 and game_winner > -1:
+            # Must be >30 seconds in the match and have a winner
+            if len(frames) > 1800 and game_winner > -1:
                 with tf.io.TFRecordWriter(str(filename)) as file_writer:
                     # This is all that we actually have full data for
                     data_cap = len(frames["stock_winner"])
