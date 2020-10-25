@@ -40,7 +40,6 @@ if args.files:
         except Exception as ex:
             record_bad_file(entry)
             continue
-        stocks = (4,4)
         ports = None
         percents = (0,0)
         damage = 0
@@ -53,10 +52,6 @@ if args.files:
                 # if game is over
                 if gamestate is None:
                     if frame_count < 1800:
-                        record_bad_file(entry)
-                        break
-                    if stocks[0] + stocks[1] > 5:
-                        # Game ended too early to count if so
                         record_bad_file(entry)
                         break
                     if damage < 100:
@@ -75,6 +70,10 @@ if args.files:
                             break
                         ports = tuple(ports)
 
+                    if frame_count > 1800 and damage > 100:
+                        # Quit early. This game is good
+                        break
+
                     # Player one and two, but not necessarily those ports
                     player_one = gamestate.player[ports[0]]
                     player_two = gamestate.player[ports[1]]
@@ -84,7 +83,6 @@ if args.files:
                     if percents[1] < player_two.percent:
                         damage += player_two.percent - percents[1]
 
-                    stocks = (player_one.stock, player_two.stock)
                     percents = (player_one.percent, player_two.percent)
 
                     frame_count += 1
