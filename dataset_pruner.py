@@ -15,7 +15,7 @@ parser.add_argument('--delete', '-d', action='store_true',
 args = parser.parse_args()
 
 def record_bad_file(bad_file):
-    with open("bad_files.txt", "a", encoding="utf-8")) as f:
+    with open("bad_files.txt", "a", encoding="utf-8") as f:
         f.write("%s\n" % bad_file.path)
 
 if args.delete:
