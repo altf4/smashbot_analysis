@@ -4,6 +4,11 @@ import tensorflow as tf
 import numpy as np
 import os
 
+# Can't be part of the model, since it has to be used in a nonmember function below
+TIME_LENGTH = 60
+# AKA stride. The amound of frames between time series
+TIME_DELTA = 4
+
 def _parse_labels(record):
     """Parses a record and makes a tensor of the right length containing labels"""
     context_feature_map = {
@@ -17,11 +22,8 @@ def _parse_labels(record):
     length = ctx["length"]
 
     # The number of labels we need is the number of windows that will be made
-    #   Which is (length - window_size + 1) // shift
-    # TODO make 480 dynamic
-    window_count = tf.math.subtract(length, 480)
-    window_count = tf.math.add(window_count, 1)
-    labels = tf.repeat(winner, window_count)
+    #   Which is length - (stride * (window_size-1))
+    labels = tf.repeat(winner, length - ((TIME_DELTA * (TIME_LENGTH-1))) )
     return labels
 
 def _parse_features(record):
@@ -80,7 +82,7 @@ def _parse_features(record):
 def _window(sequence, time_length):
     # This comes in as a tensor, so convert it to a dataset
     dataset = tf.data.Dataset.from_tensor_slices(sequence)
-    dataset = dataset.window(size=time_length, shift=1, drop_remainder=True)
+    dataset = dataset.window(size=time_length, stride=TIME_DELTA, shift=1, drop_remainder=True)
     dataset = dataset.flat_map(lambda x: x.batch(time_length))
     return dataset
 
@@ -104,11 +106,10 @@ class AdvantageBarModel:
             (float): Stock of player 2
         """
         self._BATCH_SIZE = 1000
-        self._TIME_LENGTH = 480
 
         # Build the model
         self.model = tf.keras.Sequential()
-        self.model.add(tf.keras.layers.InputLayer(input_shape=(self._TIME_LENGTH, 66,)))
+        self.model.add(tf.keras.layers.InputLayer(input_shape=(TIME_LENGTH, 66,)))
         self.model.add(tf.keras.layers.LSTM(128))
         self.model.add(tf.keras.layers.Dropout(0.2))
         self.model.add(tf.keras.layers.Dense(64, activation="relu"))
@@ -148,7 +149,7 @@ class AdvantageBarModel:
         training_data = tf.data.TFRecordDataset(training_files)
         eval_data = tf.data.TFRecordDataset(eval_files)
 
-        SHUFFLE_BUFFER_SIZE = 1
+        SHUFFLE_BUFFER_SIZE = len(training_files) // 10
         VALIDATION_SIZE = len(training_files) // 5
 
         # The operatons below happen as part of the tf.data pipeline
@@ -165,9 +166,9 @@ class AdvantageBarModel:
         eval_data_labels = eval_data.map(_parse_labels)
 
         # Window the data
-        dataset_train_features = dataset_train_features.flat_map(lambda x: _window(x, self._TIME_LENGTH))
-        dataset_validation_features = dataset_validation_features.flat_map(lambda x: _window(x, self._TIME_LENGTH))
-        eval_data_features = eval_data_features.flat_map(lambda x: _window(x, self._TIME_LENGTH))
+        dataset_train_features = dataset_train_features.flat_map(lambda x: _window(x, TIME_LENGTH))
+        dataset_validation_features = dataset_validation_features.flat_map(lambda x: _window(x, TIME_LENGTH))
+        eval_data_features = eval_data_features.flat_map(lambda x: _window(x, TIME_LENGTH))
 
         # Flatten the labels into a single stream of numbers.
         #   Right now they're bunched together in groups of games
