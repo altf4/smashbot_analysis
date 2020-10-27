@@ -174,7 +174,7 @@ if args.build:
             if len(frames["frame"]) > 1800 and game_winner > -1:
                 with tf.io.TFRecordWriter(str(filename)) as file_writer:
                     # This is all that we actually have full data for
-                    data_cap = len(frames["stock_winner"])
+                    data_cap = len(frames["frame"])
 
                     # "Context" features are static for the whole data record. Not in the time series
                     context_features = tf.train.Features(feature={
