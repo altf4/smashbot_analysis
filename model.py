@@ -30,11 +30,13 @@ def _parse_features(record):
         "player1_y": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
         "player1_percent": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
         "player1_stock": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
+        "player1_action": tf.io.FixedLenSequenceFeature([], dtype=tf.int64),
         "player2_x": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
         "player2_y": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
         "player2_percent": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
         "player2_character": tf.io.FixedLenSequenceFeature([], dtype=tf.int64),
         "player2_stock": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
+        "player2_action": tf.io.FixedLenSequenceFeature([], dtype=tf.int64),
         "stage": tf.io.FixedLenSequenceFeature([], dtype=tf.int64),
         "stock_winner": tf.io.FixedLenSequenceFeature([], dtype=tf.float32),
     }
@@ -43,27 +45,32 @@ def _parse_features(record):
                                                     sequence_features=feature_map,
                                                     context_features=None)
 
-    p1character = tf.one_hot(parsed["player1_character"], 26)
-    p2character = tf.one_hot(parsed["player2_character"], 26)
     stage = tf.one_hot(parsed["stage"], 6)
 
+    p1character = tf.one_hot(parsed["player1_character"], 26)
+    p1action = tf.one_hot(parsed["player1_action"], 0x17E)
     p1x = tf.expand_dims(parsed["player1_x"], 1)
     p1y = tf.expand_dims(parsed["player1_y"], 1)
     p1percent = tf.expand_dims(parsed["player1_percent"], 1)
     p1stock = tf.expand_dims(parsed["player1_stock"], 1)
 
+    p2character = tf.one_hot(parsed["player2_character"], 26)
+    p2action = tf.one_hot(parsed["player2_action"], 0x17E)
     p2x = tf.expand_dims(parsed["player2_x"], 1)
     p2y = tf.expand_dims(parsed["player2_y"], 1)
     p2percent = tf.expand_dims(parsed["player2_percent"], 1)
     p2stock = tf.expand_dims(parsed["player2_stock"], 1)
 
-    final = tf.concat([p1character,
-                    p2character,
+    final = tf.concat([
                     stage,
+                    p1character,
+                    p1action,
                     p1x,
                     p1y,
                     p1percent,
                     p1stock,
+                    p2character,
+                    p2action,
                     p2x,
                     p2y,
                     p2percent,
@@ -94,7 +101,7 @@ class AdvantageBarModel:
 
         # Build the model
         self.model = tf.keras.Sequential()
-        self.model.add(tf.keras.layers.InputLayer(input_shape=(66,)))
+        self.model.add(tf.keras.layers.InputLayer(input_shape=(830,)))
         self.model.add(tf.keras.layers.Dense(128))
         self.model.add(tf.keras.layers.Dropout(0.2))
         self.model.add(tf.keras.layers.Dense(64, activation="relu"))
