@@ -142,3 +142,4 @@ savedmodel/*
 *.slp
 *.npz
 *.tfrecord
+model.checkpoint/*

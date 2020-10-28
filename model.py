@@ -169,9 +169,18 @@ class AdvantageBarModel:
         validation_set = validation_set.batch(self._BATCH_SIZE)
         eval_set = eval_set.batch(self._BATCH_SIZE)
 
+        # Model checkpoint - Saves model weights when validation accuracy improves
+        callbacks = [tf.keras.callbacks.ModelCheckpoint("model.checkpoint",
+                     monitor='val_loss',
+                     verbose=1,
+                     save_best_only=True,
+                     save_weights_only=False,
+                     mode='min')]
+
         self.model.fit(training_set,
                        validation_data=validation_set,
-                       epochs=epochs)
+                       epochs=epochs,
+                       callbacks=callbacks)
         self.model.evaluate(eval_set)
 
 
