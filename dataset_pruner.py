@@ -78,6 +78,10 @@ if args.files:
                     player_one = gamestate.player[ports[0]]
                     player_two = gamestate.player[ports[1]]
 
+                    if player_one.is_cpu or player_two.is_cpu:
+                        record_bad_file(entry)
+                        break
+
                     if percents[0] < player_one.percent:
                         damage += player_one.percent - percents[0]
                     if percents[1] < player_two.percent:
