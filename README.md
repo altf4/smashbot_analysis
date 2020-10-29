@@ -6,7 +6,7 @@ An AI-powered advantage bar for Melee.
 (Image Mockup)
 
 ## What Does the Analysis Mean?
-The analysis is SmashBot's best prediction on who will win either the *current stock* or *the whole game* given the current game state.
+The analysis is SmashBot's best prediction on who will win either the game, given the current game state.
 
 ## BETA
 
@@ -22,6 +22,7 @@ Specifically, the analysis is fed:
 - Both player's damage
 - Both player's x,y coordinates
 - Both player's stock count
+- Both player's action state
 - Current stage
 
 ## How does the SmashBot Analysis Work?
@@ -51,10 +52,6 @@ When finished, the model will be saved to disk in `savedmodel/`
 
 ### Running a Proof-of-Concept
 Once you've trained your model (or gotten a pre-trained one) you can start running predictions.
-
-For this part, you'll need a full `libmelee` setup. Follow the instructions here: https://github.com/altf4/libmelee
-
-Then run:
 
 `./visualization.py`
 
