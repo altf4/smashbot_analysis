@@ -78,6 +78,12 @@ if args.files:
                     player_one = gamestate.player[ports[0]]
                     player_two = gamestate.player[ports[1]]
 
+                    if gamestate.stage not in [melee.Stage.BATTLEFIELD, melee.Stage.FINAL_DESTINATION,
+                                                melee.Stage.DREAMLAND, melee.Stage.FOUNTAIN_OF_DREAMS,
+                                                melee.Stage.YOSHIS_STORY, melee.Stage.POKEMON_STADIUM]:
+                        record_bad_file(entry)
+                        break
+
                     if player_one.is_cpu or player_two.is_cpu:
                         record_bad_file(entry)
                         break
