@@ -85,13 +85,15 @@ class AdvantageBarModel:
         """AdvantageBarModel
 
         Input params:
-            (one-hot): Character of player 1
-            (one-hot): Character of player 2
             (one-hot): Stage
+            (one-hot): Character of player 1
+            (one-hot): Action state of player 1
             (float): X coordinate of player 1
             (float): Y coordinate of player 1
             (float): Damage of player 1
             (float): Stock of player 1
+            (one-hot): Character of player 2
+            (one-hot): Action state of player 2
             (float): X coordinate of player 2
             (float): Y coordinate of player 2
             (float): Damage of player 2

@@ -143,3 +143,4 @@ savedmodel/*
 *.npz
 *.tfrecord
 model.checkpoint/*
+bad_files.txt
