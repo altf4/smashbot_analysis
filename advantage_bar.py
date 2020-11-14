@@ -83,12 +83,73 @@ if args.build:
             "player1_percent": [],
             "player1_stock": [],
             "player1_action": [],
+            "player1_action_frame": [],
+            "player1_facing": [],
+            "player1_hitlag": [],
+            "player1_hitstun_frames_left": [],
+            "player1_invulnerability_left": [],
+            "player1_invulnerable": [],
+            "player1_jumps_left": [],
+            "player1_on_ground": [],
+            "player1_sheild_strength": [],
+            "player1_speed_air_x_self": [],
+            "player1_speed_ground_x_self": [],
+            "player1_speed_x_attack": [],
+            "player1_speed_y_attack": [],
+            "player1_speed_y_self": [],
+
+            "player2_character": [],
             "player2_x": [],
             "player2_y": [],
             "player2_percent": [],
             "player2_stock": [],
             "player2_action": [],
-            "player2_character": [],
+            "player2_action_frame": [],
+            "player2_facing": [],
+            "player2_hitlag": [],
+            "player2_hitstun_frames_left": [],
+            "player2_invulnerability_left": [],
+            "player2_invulnerable": [],
+            "player2_jumps_left": [],
+            "player2_on_ground": [],
+            "player2_sheild_strength": [],
+            "player2_speed_air_x_self": [],
+            "player2_speed_ground_x_self": [],
+            "player2_speed_x_attack": [],
+            "player2_speed_y_attack": [],
+            "player2_speed_y_self": [],
+
+            "projectile1_x": [],
+            "projectile1_y": [],
+            "projectile1_x_speed": [],
+            "projectile1_y_speed": [],
+            "projectile1_owner": [],
+            "projectile1_subtype": [],
+            "projectile2_x": [],
+            "projectile2_y": [],
+            "projectile2_x_speed": [],
+            "projectile2_y_speed": [],
+            "projectile2_owner": [],
+            "projectile2_subtype": [],
+            "projectile3_x": [],
+            "projectile3_y": [],
+            "projectile3_x_speed": [],
+            "projectile3_y_speed": [],
+            "projectile3_owner": [],
+            "projectile3_subtype": [],
+            "projectile4_x": [],
+            "projectile4_y": [],
+            "projectile4_x_speed": [],
+            "projectile4_y_speed": [],
+            "projectile4_owner": [],
+            "projectile4_subtype": [],
+            "projectile5_x": [],
+            "projectile5_y": [],
+            "projectile5_x_speed": [],
+            "projectile5_y_speed": [],
+            "projectile5_owner": [],
+            "projectile5_subtype": [],
+
             "stage": [],
             "frame": [],
             "stock_winner": [],
@@ -143,12 +204,64 @@ if args.build:
                         frames["player1_percent"].append(player_one.percent)
                         frames["player1_stock"].append(player_one.stock)
                         frames["player1_action"].append(player_one.action.value)
+                        frames["player1_action_frame"].append(player_one.action_frame)
+                        frames["player1_facing"].append(int(player_one.facing))
+                        frames["player1_hitlag"].append(int(player_one.hitlag))
+                        frames["player1_hitstun_frames_left"].append(player_one.hitstun_frames_left)
+                        frames["player1_invulnerability_left"].append(player_one.invulnerability_left)
+                        frames["player1_invulnerable"].append(int(player_one.invulnerable))
+                        frames["player1_jumps_left"].append(player_one.jumps_left)
+                        frames["player1_on_ground"].append(int(player_one.on_ground))
+                        frames["player1_sheild_strength"].append(player_one.shield_strength)
+                        frames["player1_speed_air_x_self"].append(player_one.speed_air_x_self)
+                        frames["player1_speed_ground_x_self"].append(player_one.speed_ground_x_self)
+                        frames["player1_speed_x_attack"].append(player_one.speed_x_attack)
+                        frames["player1_speed_y_attack"].append(player_one.speed_y_attack)
+                        frames["player1_speed_y_self"].append(player_one.speed_y_self)
+
+                        frames["player2_character"].append(player_two.character.value)
                         frames["player2_x"].append(player_two.x)
                         frames["player2_y"].append(player_two.y)
                         frames["player2_percent"].append(player_two.percent)
                         frames["player2_stock"].append(player_two.stock)
                         frames["player2_action"].append(player_two.action.value)
-                        frames["player2_character"].append(player_one.character.value)
+                        frames["player2_action_frame"].append(player_two.action_frame)
+                        frames["player2_facing"].append(int(player_two.facing))
+                        frames["player2_hitlag"].append(int(player_two.hitlag))
+                        frames["player2_hitstun_frames_left"].append(player_two.hitstun_frames_left)
+                        frames["player2_invulnerability_left"].append(player_two.invulnerability_left)
+                        frames["player2_invulnerable"].append(int(player_two.invulnerable))
+                        frames["player2_jumps_left"].append(player_two.jumps_left)
+                        frames["player2_on_ground"].append(int(player_two.on_ground))
+                        frames["player2_sheild_strength"].append(player_two.shield_strength)
+                        frames["player2_speed_air_x_self"].append(player_two.speed_air_x_self)
+                        frames["player2_speed_ground_x_self"].append(player_two.speed_ground_x_self)
+                        frames["player2_speed_x_attack"].append(player_two.speed_x_attack)
+                        frames["player2_speed_y_attack"].append(player_two.speed_y_attack)
+                        frames["player2_speed_y_self"].append(player_two.speed_y_self)
+
+                        # Put in projectiles now
+                        i = 0
+                        for projectile in gamestate.projectiles:
+                            # Ignore if projectile has no owner
+                            if projectile.owner > 0:
+                                i += 1
+                                frames["projectile" + str(i) + "_x"].append(projectile.x)
+                                frames["projectile" + str(i) + "_y"].append(projectile.y)
+                                frames["projectile" + str(i) + "_x_speed"].append(projectile.x_speed)
+                                frames["projectile" + str(i) + "_y_speed"].append(projectile.y_speed)
+                                frames["projectile" + str(i) + "_owner"].append(projectile.owner)
+                                frames["projectile" + str(i) + "_subtype"].append(projectile.subtype.value)
+
+                        # Now fill in any blanks left over
+                        for j in range(5-i):
+                            frames["projectile" + str(j+1) + "_x"].append(0)
+                            frames["projectile" + str(j+1) + "_y"].append(0)
+                            frames["projectile" + str(j+1) + "_x_speed"].append(0)
+                            frames["projectile" + str(j+1) + "_y_speed"].append(0)
+                            frames["projectile" + str(j+1) + "_owner"].append(0)
+                            frames["projectile" + str(j+1) + "_subtype"].append(-1)
+
                         frames["stage"].append(AdvantageBarModel.stage_flatten(gamestate.stage.value))
                         frames["frame"].append(gamestate.frame)
 
@@ -189,12 +302,73 @@ if args.build:
                         "player1_percent": _float_feature(frames["player1_percent"][:data_cap]),
                         "player1_stock": _float_feature(frames["player1_stock"][:data_cap]),
                         "player1_action": _int64_feature(frames["player1_action"][:data_cap]),
+                        "player1_action_frame": _float_feature(frames["player1_action_frame"][:data_cap]),
+                        "player1_facing": _int64_feature(frames["player1_facing"][:data_cap]),
+                        "player1_hitlag": _int64_feature(frames["player1_hitlag"][:data_cap]),
+                        "player1_hitstun_frames_left": _float_feature(frames["player1_hitstun_frames_left"][:data_cap]),
+                        "player1_invulnerability_left": _float_feature(frames["player1_invulnerability_left"][:data_cap]),
+                        "player1_invulnerable": _int64_feature(frames["player1_invulnerable"][:data_cap]),
+                        "player1_jumps_left": _float_feature(frames["player1_jumps_left"][:data_cap]),
+                        "player1_on_ground": _int64_feature(frames["player1_on_ground"][:data_cap]),
+                        "player1_sheild_strength": _float_feature(frames["player1_sheild_strength"][:data_cap]),
+                        "player1_speed_air_x_self": _float_feature(frames["player1_speed_air_x_self"][:data_cap]),
+                        "player1_speed_ground_x_self": _float_feature(frames["player1_speed_ground_x_self"][:data_cap]),
+                        "player1_speed_x_attack": _float_feature(frames["player1_speed_x_attack"][:data_cap]),
+                        "player1_speed_y_attack": _float_feature(frames["player1_speed_y_attack"][:data_cap]),
+                        "player1_speed_y_self": _float_feature(frames["player1_speed_y_self"][:data_cap]),
+
+                        "player2_character": _int64_feature(frames["player2_character"][:data_cap]),
                         "player2_x": _float_feature(frames["player2_x"][:data_cap]),
                         "player2_y": _float_feature(frames["player2_y"][:data_cap]),
                         "player2_percent": _float_feature(frames["player2_percent"][:data_cap]),
                         "player2_stock": _float_feature(frames["player2_stock"][:data_cap]),
                         "player2_action": _int64_feature(frames["player2_action"][:data_cap]),
-                        "player2_character": _int64_feature(frames["player2_character"][:data_cap]),
+                        "player2_action_frame": _float_feature(frames["player2_action_frame"][:data_cap]),
+                        "player2_facing": _int64_feature(frames["player2_facing"][:data_cap]),
+                        "player2_hitlag": _int64_feature(frames["player2_hitlag"][:data_cap]),
+                        "player2_hitstun_frames_left": _float_feature(frames["player2_hitstun_frames_left"][:data_cap]),
+                        "player2_invulnerability_left": _float_feature(frames["player2_invulnerability_left"][:data_cap]),
+                        "player2_invulnerable": _int64_feature(frames["player2_invulnerable"][:data_cap]),
+                        "player2_jumps_left": _float_feature(frames["player2_jumps_left"][:data_cap]),
+                        "player2_on_ground": _int64_feature(frames["player2_on_ground"][:data_cap]),
+                        "player2_sheild_strength": _float_feature(frames["player2_sheild_strength"][:data_cap]),
+                        "player2_speed_air_x_self": _float_feature(frames["player2_speed_air_x_self"][:data_cap]),
+                        "player2_speed_ground_x_self": _float_feature(frames["player2_speed_ground_x_self"][:data_cap]),
+                        "player2_speed_x_attack": _float_feature(frames["player2_speed_x_attack"][:data_cap]),
+                        "player2_speed_y_attack": _float_feature(frames["player2_speed_y_attack"][:data_cap]),
+                        "player2_speed_y_self": _float_feature(frames["player2_speed_y_self"][:data_cap]),
+
+                        "projectile1_x": _float_feature(frames["projectile1_x"][:data_cap]),
+                        "projectile1_y": _float_feature(frames["projectile1_y"][:data_cap]),
+                        "projectile1_x_speed": _float_feature(frames["projectile1_x_speed"][:data_cap]),
+                        "projectile1_y_speed": _float_feature(frames["projectile1_y_speed"][:data_cap]),
+                        "projectile1_owner": _int64_feature(frames["projectile1_owner"][:data_cap]),
+                        "projectile1_subtype": _int64_feature(frames["projectile1_subtype"][:data_cap]),
+                        "projectile2_x": _float_feature(frames["projectile2_x"][:data_cap]),
+                        "projectile2_y": _float_feature(frames["projectile2_y"][:data_cap]),
+                        "projectile2_x_speed": _float_feature(frames["projectile2_x_speed"][:data_cap]),
+                        "projectile2_y_speed": _float_feature(frames["projectile2_y_speed"][:data_cap]),
+                        "projectile2_owner": _int64_feature(frames["projectile2_owner"][:data_cap]),
+                        "projectile2_subtype": _int64_feature(frames["projectile2_subtype"][:data_cap]),
+                        "projectile3_x": _float_feature(frames["projectile3_x"][:data_cap]),
+                        "projectile3_y": _float_feature(frames["projectile3_y"][:data_cap]),
+                        "projectile3_x_speed": _float_feature(frames["projectile3_x_speed"][:data_cap]),
+                        "projectile3_y_speed": _float_feature(frames["projectile3_y_speed"][:data_cap]),
+                        "projectile3_owner": _int64_feature(frames["projectile3_owner"][:data_cap]),
+                        "projectile3_subtype": _int64_feature(frames["projectile3_subtype"][:data_cap]),
+                        "projectile4_x": _float_feature(frames["projectile4_x"][:data_cap]),
+                        "projectile4_y": _float_feature(frames["projectile4_y"][:data_cap]),
+                        "projectile4_x_speed": _float_feature(frames["projectile4_x_speed"][:data_cap]),
+                        "projectile4_y_speed": _float_feature(frames["projectile4_y_speed"][:data_cap]),
+                        "projectile4_owner": _int64_feature(frames["projectile4_owner"][:data_cap]),
+                        "projectile4_subtype": _int64_feature(frames["projectile4_subtype"][:data_cap]),
+                        "projectile5_x": _float_feature(frames["projectile5_x"][:data_cap]),
+                        "projectile5_y": _float_feature(frames["projectile5_y"][:data_cap]),
+                        "projectile5_x_speed": _float_feature(frames["projectile5_x_speed"][:data_cap]),
+                        "projectile5_y_speed": _float_feature(frames["projectile5_y_speed"][:data_cap]),
+                        "projectile5_owner": _int64_feature(frames["projectile5_owner"][:data_cap]),
+                        "projectile5_subtype": _int64_feature(frames["projectile5_subtype"][:data_cap]),
+
                         "stage": _int64_feature(frames["stage"][:data_cap]),
                         "frame": _float_feature(frames["frame"][:data_cap]),
                         "stock_winner": _float_feature(frames["stock_winner"][:data_cap]),
