@@ -119,36 +119,36 @@ if args.build:
             "player2_speed_y_attack": [],
             "player2_speed_y_self": [],
 
-            "projectile1_x": [],
-            "projectile1_y": [],
-            "projectile1_x_speed": [],
-            "projectile1_y_speed": [],
-            "projectile1_owner": [],
-            "projectile1_subtype": [],
-            "projectile2_x": [],
-            "projectile2_y": [],
-            "projectile2_x_speed": [],
-            "projectile2_y_speed": [],
-            "projectile2_owner": [],
-            "projectile2_subtype": [],
-            "projectile3_x": [],
-            "projectile3_y": [],
-            "projectile3_x_speed": [],
-            "projectile3_y_speed": [],
-            "projectile3_owner": [],
-            "projectile3_subtype": [],
-            "projectile4_x": [],
-            "projectile4_y": [],
-            "projectile4_x_speed": [],
-            "projectile4_y_speed": [],
-            "projectile4_owner": [],
-            "projectile4_subtype": [],
-            "projectile5_x": [],
-            "projectile5_y": [],
-            "projectile5_x_speed": [],
-            "projectile5_y_speed": [],
-            "projectile5_owner": [],
-            "projectile5_subtype": [],
+            # "projectile1_x": [],
+            # "projectile1_y": [],
+            # "projectile1_x_speed": [],
+            # "projectile1_y_speed": [],
+            # "projectile1_owner": [],
+            # "projectile1_subtype": [],
+            # "projectile2_x": [],
+            # "projectile2_y": [],
+            # "projectile2_x_speed": [],
+            # "projectile2_y_speed": [],
+            # "projectile2_owner": [],
+            # "projectile2_subtype": [],
+            # "projectile3_x": [],
+            # "projectile3_y": [],
+            # "projectile3_x_speed": [],
+            # "projectile3_y_speed": [],
+            # "projectile3_owner": [],
+            # "projectile3_subtype": [],
+            # "projectile4_x": [],
+            # "projectile4_y": [],
+            # "projectile4_x_speed": [],
+            # "projectile4_y_speed": [],
+            # "projectile4_owner": [],
+            # "projectile4_subtype": [],
+            # "projectile5_x": [],
+            # "projectile5_y": [],
+            # "projectile5_x_speed": [],
+            # "projectile5_y_speed": [],
+            # "projectile5_owner": [],
+            # "projectile5_subtype": [],
 
             "stage": [],
             "frame": [],
@@ -240,27 +240,27 @@ if args.build:
                         frames["player2_speed_y_attack"].append(player_two.speed_y_attack)
                         frames["player2_speed_y_self"].append(player_two.speed_y_self)
 
-                        # Put in projectiles now
-                        i = 0
-                        for projectile in gamestate.projectiles:
-                            # Ignore if projectile has no owner
-                            if projectile.owner > 0:
-                                i += 1
-                                frames["projectile" + str(i) + "_x"].append(projectile.x)
-                                frames["projectile" + str(i) + "_y"].append(projectile.y)
-                                frames["projectile" + str(i) + "_x_speed"].append(projectile.x_speed)
-                                frames["projectile" + str(i) + "_y_speed"].append(projectile.y_speed)
-                                frames["projectile" + str(i) + "_owner"].append(projectile.owner)
-                                frames["projectile" + str(i) + "_subtype"].append(projectile.subtype.value)
-
-                        # Now fill in any blanks left over
-                        for j in range(5-i):
-                            frames["projectile" + str(j+1) + "_x"].append(0)
-                            frames["projectile" + str(j+1) + "_y"].append(0)
-                            frames["projectile" + str(j+1) + "_x_speed"].append(0)
-                            frames["projectile" + str(j+1) + "_y_speed"].append(0)
-                            frames["projectile" + str(j+1) + "_owner"].append(0)
-                            frames["projectile" + str(j+1) + "_subtype"].append(-1)
+                        # # Put in projectiles now
+                        # i = 0
+                        # for projectile in gamestate.projectiles:
+                        #     # Ignore if projectile has no owner
+                        #     if projectile.owner > 0:
+                        #         i += 1
+                        #         frames["projectile" + str(i) + "_x"].append(projectile.x)
+                        #         frames["projectile" + str(i) + "_y"].append(projectile.y)
+                        #         frames["projectile" + str(i) + "_x_speed"].append(projectile.x_speed)
+                        #         frames["projectile" + str(i) + "_y_speed"].append(projectile.y_speed)
+                        #         frames["projectile" + str(i) + "_owner"].append(int(projectile.owner == ports[0]))
+                        #         frames["projectile" + str(i) + "_subtype"].append(projectile.subtype.value)
+                        #
+                        # # Now fill in any blanks left over
+                        # for j in range(5-i):
+                        #     frames["projectile" + str(j+1) + "_x"].append(0)
+                        #     frames["projectile" + str(j+1) + "_y"].append(0)
+                        #     frames["projectile" + str(j+1) + "_x_speed"].append(0)
+                        #     frames["projectile" + str(j+1) + "_y_speed"].append(0)
+                        #     frames["projectile" + str(j+1) + "_owner"].append(0)
+                        #     frames["projectile" + str(j+1) + "_subtype"].append(0)
 
                         frames["stage"].append(AdvantageBarModel.stage_flatten(gamestate.stage.value))
                         frames["frame"].append(gamestate.frame)
@@ -338,36 +338,36 @@ if args.build:
                         "player2_speed_y_attack": _float_feature(frames["player2_speed_y_attack"][:data_cap]),
                         "player2_speed_y_self": _float_feature(frames["player2_speed_y_self"][:data_cap]),
 
-                        "projectile1_x": _float_feature(frames["projectile1_x"][:data_cap]),
-                        "projectile1_y": _float_feature(frames["projectile1_y"][:data_cap]),
-                        "projectile1_x_speed": _float_feature(frames["projectile1_x_speed"][:data_cap]),
-                        "projectile1_y_speed": _float_feature(frames["projectile1_y_speed"][:data_cap]),
-                        "projectile1_owner": _int64_feature(frames["projectile1_owner"][:data_cap]),
-                        "projectile1_subtype": _int64_feature(frames["projectile1_subtype"][:data_cap]),
-                        "projectile2_x": _float_feature(frames["projectile2_x"][:data_cap]),
-                        "projectile2_y": _float_feature(frames["projectile2_y"][:data_cap]),
-                        "projectile2_x_speed": _float_feature(frames["projectile2_x_speed"][:data_cap]),
-                        "projectile2_y_speed": _float_feature(frames["projectile2_y_speed"][:data_cap]),
-                        "projectile2_owner": _int64_feature(frames["projectile2_owner"][:data_cap]),
-                        "projectile2_subtype": _int64_feature(frames["projectile2_subtype"][:data_cap]),
-                        "projectile3_x": _float_feature(frames["projectile3_x"][:data_cap]),
-                        "projectile3_y": _float_feature(frames["projectile3_y"][:data_cap]),
-                        "projectile3_x_speed": _float_feature(frames["projectile3_x_speed"][:data_cap]),
-                        "projectile3_y_speed": _float_feature(frames["projectile3_y_speed"][:data_cap]),
-                        "projectile3_owner": _int64_feature(frames["projectile3_owner"][:data_cap]),
-                        "projectile3_subtype": _int64_feature(frames["projectile3_subtype"][:data_cap]),
-                        "projectile4_x": _float_feature(frames["projectile4_x"][:data_cap]),
-                        "projectile4_y": _float_feature(frames["projectile4_y"][:data_cap]),
-                        "projectile4_x_speed": _float_feature(frames["projectile4_x_speed"][:data_cap]),
-                        "projectile4_y_speed": _float_feature(frames["projectile4_y_speed"][:data_cap]),
-                        "projectile4_owner": _int64_feature(frames["projectile4_owner"][:data_cap]),
-                        "projectile4_subtype": _int64_feature(frames["projectile4_subtype"][:data_cap]),
-                        "projectile5_x": _float_feature(frames["projectile5_x"][:data_cap]),
-                        "projectile5_y": _float_feature(frames["projectile5_y"][:data_cap]),
-                        "projectile5_x_speed": _float_feature(frames["projectile5_x_speed"][:data_cap]),
-                        "projectile5_y_speed": _float_feature(frames["projectile5_y_speed"][:data_cap]),
-                        "projectile5_owner": _int64_feature(frames["projectile5_owner"][:data_cap]),
-                        "projectile5_subtype": _int64_feature(frames["projectile5_subtype"][:data_cap]),
+                        # "projectile1_x": _float_feature(frames["projectile1_x"][:data_cap]),
+                        # "projectile1_y": _float_feature(frames["projectile1_y"][:data_cap]),
+                        # "projectile1_x_speed": _float_feature(frames["projectile1_x_speed"][:data_cap]),
+                        # "projectile1_y_speed": _float_feature(frames["projectile1_y_speed"][:data_cap]),
+                        # "projectile1_owner": _int64_feature(frames["projectile1_owner"][:data_cap]),
+                        # "projectile1_subtype": _int64_feature(frames["projectile1_subtype"][:data_cap]),
+                        # "projectile2_x": _float_feature(frames["projectile2_x"][:data_cap]),
+                        # "projectile2_y": _float_feature(frames["projectile2_y"][:data_cap]),
+                        # "projectile2_x_speed": _float_feature(frames["projectile2_x_speed"][:data_cap]),
+                        # "projectile2_y_speed": _float_feature(frames["projectile2_y_speed"][:data_cap]),
+                        # "projectile2_owner": _int64_feature(frames["projectile2_owner"][:data_cap]),
+                        # "projectile2_subtype": _int64_feature(frames["projectile2_subtype"][:data_cap]),
+                        # "projectile3_x": _float_feature(frames["projectile3_x"][:data_cap]),
+                        # "projectile3_y": _float_feature(frames["projectile3_y"][:data_cap]),
+                        # "projectile3_x_speed": _float_feature(frames["projectile3_x_speed"][:data_cap]),
+                        # "projectile3_y_speed": _float_feature(frames["projectile3_y_speed"][:data_cap]),
+                        # "projectile3_owner": _int64_feature(frames["projectile3_owner"][:data_cap]),
+                        # "projectile3_subtype": _int64_feature(frames["projectile3_subtype"][:data_cap]),
+                        # "projectile4_x": _float_feature(frames["projectile4_x"][:data_cap]),
+                        # "projectile4_y": _float_feature(frames["projectile4_y"][:data_cap]),
+                        # "projectile4_x_speed": _float_feature(frames["projectile4_x_speed"][:data_cap]),
+                        # "projectile4_y_speed": _float_feature(frames["projectile4_y_speed"][:data_cap]),
+                        # "projectile4_owner": _int64_feature(frames["projectile4_owner"][:data_cap]),
+                        # "projectile4_subtype": _int64_feature(frames["projectile4_subtype"][:data_cap]),
+                        # "projectile5_x": _float_feature(frames["projectile5_x"][:data_cap]),
+                        # "projectile5_y": _float_feature(frames["projectile5_y"][:data_cap]),
+                        # "projectile5_x_speed": _float_feature(frames["projectile5_x_speed"][:data_cap]),
+                        # "projectile5_y_speed": _float_feature(frames["projectile5_y_speed"][:data_cap]),
+                        # "projectile5_owner": _int64_feature(frames["projectile5_owner"][:data_cap]),
+                        # "projectile5_subtype": _int64_feature(frames["projectile5_subtype"][:data_cap]),
 
                         "stage": _int64_feature(frames["stage"][:data_cap]),
                         "frame": _float_feature(frames["frame"][:data_cap]),
